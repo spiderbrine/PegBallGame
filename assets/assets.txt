@@ -1,1 +1,8 @@
+default.fnt
+font-small.fnt
+levelSelectScreen.png
 libgdx.png
+titleScreen.png
+uiskin.atlas
+uiskin.json
+uiskin.png

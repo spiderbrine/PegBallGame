@@ -1,4 +1,4 @@
-package com.emerson.gamescreen;
+package com.emerson.gamescreens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
@@ -8,9 +8,12 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.emerson.pegballgame.PegBallStart;
 import com.emerson.world.GameWorld;
 
 public class GameScreen extends ScreenAdapter {
+
+    private final PegBallStart GAME;
 
     private static final float VIRTUAL_WIDTH = 1280;  // Virtual resolution width
     private static final float VIRTUAL_HEIGHT = 720;  // Virtual resolution height
@@ -23,7 +26,8 @@ public class GameScreen extends ScreenAdapter {
     private OrthographicCamera camera;
     private Viewport viewport;
 
-    public GameScreen() {
+    public GameScreen(PegBallStart game) {
+        this.GAME = game;
         // create camera
         camera = new OrthographicCamera();
 
@@ -39,7 +43,7 @@ public class GameScreen extends ScreenAdapter {
         gameWorld = new GameWorld();
         shapeRenderer = new ShapeRenderer();
 
-       debugRenderer = new Box2DDebugRenderer();
+        //debugRenderer = new Box2DDebugRenderer();
     }
 
     @Override
@@ -51,7 +55,7 @@ public class GameScreen extends ScreenAdapter {
         shapeRenderer.setProjectionMatrix(camera.combined);
 
         // clear screen
-        Gdx.gl.glClearColor(1, 1, 1, 1);  // RGBA (white)
+        Gdx.gl.glClearColor(1, 1, 1, 1);  // rgba (white)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         // update world (60 times per second)
@@ -62,7 +66,7 @@ public class GameScreen extends ScreenAdapter {
         gameWorld.renderObjects(shapeRenderer);  // Call the render method for all objects
         shapeRenderer.end();
 
-        debugRenderer.render(gameWorld.getWorld(), camera.combined);
+        //debugRenderer.render(gameWorld.getWorld(), camera.combined);
     }
 
     public void resize(int width, int height) {
