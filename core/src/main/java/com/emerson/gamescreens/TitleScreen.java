@@ -2,17 +2,20 @@ package com.emerson.gamescreens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.emerson.pegballgame.PegBallStart;
+
+import static com.emerson.gamescreens.GameScreen.VIRTUAL_HEIGHT;
+import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
 
 public class TitleScreen implements Screen {
 
@@ -23,10 +26,19 @@ public class TitleScreen implements Screen {
     private SpriteBatch batch;
     private Texture backgroundTexture;
 
+    private OrthographicCamera camera;
+    private Viewport viewport;
+
     public TitleScreen(PegBallStart game){
         this.GAME = game;
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
+
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
+        viewport.apply();
+        camera.position.set(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, 0);
+        camera.update();
 
         // ui skin for buttons
         skin = new Skin(Gdx.files.internal("uiskin.json"));
@@ -62,16 +74,19 @@ public class TitleScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        batch.draw(backgroundTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        batch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
         batch.end();
 
         stage.act(delta);
         stage.draw();
+        //stage.setDebugAll(true);
     }
 
     @Override
     public void resize(int width, int height) {
+        viewport.update(width, height);
         stage.getViewport().update(width, height);
     }
 

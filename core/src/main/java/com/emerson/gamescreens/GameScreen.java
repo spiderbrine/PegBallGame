@@ -15,8 +15,8 @@ public class GameScreen extends ScreenAdapter {
 
     private final PegBallStart GAME;
 
-    private static final float VIRTUAL_WIDTH = 1280;  // Virtual resolution width
-    private static final float VIRTUAL_HEIGHT = 720;  // Virtual resolution height
+    public static final float VIRTUAL_WIDTH = 1280;  // Virtual resolution width
+    public static final float VIRTUAL_HEIGHT = 720;  // Virtual resolution height
 
     private GameWorld gameWorld;
     private ShapeRenderer shapeRenderer;
@@ -40,7 +40,7 @@ public class GameScreen extends ScreenAdapter {
         camera.update();
 
         // create GameWorld and ShapeRenderer to render everything
-        gameWorld = new GameWorld();
+        gameWorld = new GameWorld(GAME);
         shapeRenderer = new ShapeRenderer();
 
         //debugRenderer = new Box2DDebugRenderer();
@@ -65,13 +65,19 @@ public class GameScreen extends ScreenAdapter {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         gameWorld.renderObjects(shapeRenderer);  // Call the render method for all objects
         shapeRenderer.end();
+        gameWorld.renderStage(deltaTime);
 
         //debugRenderer.render(gameWorld.getWorld(), camera.combined);
     }
 
     public void resize(int width, int height) {
         // resize so stuff doesn't look weird
+        if (!gameWorld.characterSelected) {
+            gameWorld.characterSelectMenu.resize(width, height);
+        }
         viewport.update(width, height);
+
+
     }
 
     @Override
