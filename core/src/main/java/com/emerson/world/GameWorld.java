@@ -18,15 +18,15 @@ import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.emerson.gameobjects.Ball;
-import com.emerson.gameobjects.BallLauncher;
-import com.emerson.gameobjects.Peg;
+import com.emerson.gameobjects.*;
 import com.emerson.gamescreens.CharacterSelectMenu;
 import com.emerson.gamescreens.LevelSelectScreen;
 import com.emerson.pegballgame.PegBallStart;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.emerson.gamescreens.GameScreen.VIRTUAL_HEIGHT;
 import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
@@ -34,10 +34,12 @@ import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
 public class GameWorld {
 
     private final PegBallStart GAME;
+    private final int TOTAL_PEGS = 100;
 
     private boolean isPaused = true;
 
     private World world;
+    private GameContactListener gameContactListener;
 
     private Stage stage;
     private final Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
@@ -50,8 +52,16 @@ public class GameWorld {
 
     private TextButton pauseButton = new TextButton("Pause", skin);
 
+    private Obstacle leftWall;
+    private Obstacle rightWall;
+
     private Ball ball;
-    List<Peg> pegs = new ArrayList<>();
+    private List<Peg> pegs = new ArrayList<>();
+    private Map<Integer, Peg> pegMap;
+    private List<Peg> pegsToDisappear = new ArrayList<>();
+    private float timeSinceLastDisappear = 0f;
+    private int pegIndex = 0;
+
     private BallLauncher ballLauncher;
 
     private OrthographicCamera camera;
@@ -63,6 +73,7 @@ public class GameWorld {
 
         this.GAME = game;
         stage = new Stage(new ScreenViewport());
+        pegMap = new HashMap<>();
 
         camera = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
@@ -82,11 +93,14 @@ public class GameWorld {
         world = new World(new Vector2(0f, -50.0f), true);
 
         // on the second line, god created collision detection
-        world.setContactListener(new GameContactListener());
+        gameContactListener = new GameContactListener(pegMap, getPegs());
+        world.setContactListener(gameContactListener);
 
+        createObstacles();
 
         // on the third line, god initialized GameObjects
-        createPegsStaggeredGrid(100, 10, 15, 40f, 25f, 350f, 75f, 7f);
+        createPegsStaggeredGrid(10, 40, 20f, viewport.getWorldWidth() / 2.8f, 150f, 7f);
+        //createBrickPegsPattern(5, 40, 20f, viewport.getWorldWidth() / 2.8f, 130f, 15f, 10f);
 
         Timer.schedule(new Timer.Task() {
             @Override
@@ -133,22 +147,30 @@ public class GameWorld {
         pauseButton.setVisible(true);
     }
 
+    public void createObstacles() {
+
+        BodyDef leftWallBodyDef = new BodyDef();
+        leftWallBodyDef.position.set(200, 0);
+        BodyDef rightWallBodyDef = new BodyDef();
+        rightWallBodyDef.position.set(880, 0);
+        Body leftWallBody = world.createBody(leftWallBodyDef);
+        Body rightWallBody = world.createBody(rightWallBodyDef);
+        PolygonShape shape = new PolygonShape();
+        int leftWallWidth = 200;
+        int leftWallHeight = 720;
+        shape.setAsBox(leftWallWidth / 2, leftWallHeight / 2, new Vector2(leftWallWidth / 2, leftWallHeight / 2), 0);
+
+        leftWall = new Obstacle(getWorld(), shape, leftWallBody, leftWallBody.getPosition(),leftWallWidth, leftWallHeight);
+        rightWall = new Obstacle(getWorld(), shape, rightWallBody, rightWallBody.getPosition(), leftWallWidth, leftWallHeight);
+        shape.dispose();
+    }
+
     public void createBallLauncher(float startX, float startY, float width, float height) {
         // ALL CREATION AND DEFINITION STUFF SHOULD BE IN OBJECT CLASSES LATER ON
+        // gotta make def position and body for constructor but thats all
         BodyDef ballLauncherDef = new BodyDef();
-        ballLauncherDef.type = BodyDef.BodyType.KinematicBody; // not affected by world forces but able to be moved manually
         ballLauncherDef.position.set(startX, startY);
         Body ballLauncherBody = world.createBody(ballLauncherDef);
-
-        PolygonShape rectangle = new PolygonShape();
-        // weird math shit cause the rectangle goes from the actual middle not bottom left corner
-        rectangle.setAsBox(width / 2, height / 2, new Vector2(width / 2, height / 2), 0);
-
-        FixtureDef ballLauncherFixtureDef = new FixtureDef();
-        ballLauncherFixtureDef.shape = rectangle;
-        ballLauncherBody.createFixture(ballLauncherFixtureDef);
-
-        rectangle.dispose();
 
         ballLauncher = new BallLauncher(this, ballLauncherBody, ballLauncherBody.getPosition(), width, height);
     }
@@ -156,86 +178,107 @@ public class GameWorld {
 
     public void createBall(float startX, float startY, float radius){
         BodyDef ballDef = new BodyDef();
-        //ballDef.type = BodyDef.BodyType.StaticBody;  // static because the ball can't move until it shoots
-        System.out.println("Ball is static");
         ballDef.position.set(startX, startY); // position in the world or on screen idk
-
         Body ballBody = world.createBody(ballDef);
-        //ballBody.setLinearDamping(0);
-        //ballBody.setAngularDamping(0);
-        ballBody.setGravityScale(0); // disable gravity
-        ballBody.setLinearVelocity(0, 0);  // Keep it from moving
 
-        CircleShape circle = new CircleShape();
-        circle.setRadius(radius);
-
-        // fixture that attaches circle to body
-        FixtureDef ballFixtureDef = new FixtureDef();
-        ballFixtureDef.shape = circle;
-        ballFixtureDef.density = 0.85f; // mass 0.85 is good
-        ballFixtureDef.friction = 0.2f; // 0.2 is good
-        ballFixtureDef.restitution = 0.78f;  // bounce 0.75 is good
-
-        ballBody.createFixture(ballFixtureDef);
-
-        circle.dispose();
-
-        ball = new Ball(ballBody, ballBody.getPosition(), radius);
+        ball = new Ball(getWorld(), ballBody, ballBody.getPosition(), radius);
 
     }
 
-    // creates a staggered grid of pegs and adds them to a list which is used for rendering
-    // numPegs does nothing currently but will be used to set a number of pegs to be created
-    // rather than an amount calculated by row/col and spacing values
-    // also need a way to ID each peg when it comes time for assignment of colors and behaviors
-    public void createPegsStaggeredGrid(int numPegs, int rows, int cols, float pegSpacing, float rowOffset,
-                                        float startX, float startY, float radius) {
+    int pegID = 1;
+    // creates a staggered grid of pegs and adds them to a list which is used for rendering and a map used for collision
+    public void createPegsStaggeredGrid(int rows, float pegSpacing, float rowOffset, float startX, float startY, float radius) {
 
-        // uses same single circle to make pegs to save on resources then disposes afterward
-        CircleShape circle = new CircleShape();
-        circle.setRadius(radius);
+        int cols = TOTAL_PEGS / rows;
 
         // maybe peg spacing can be automatically calculated but I don't feel like it right now
         for (int row = 0; row < rows; row++){
             for (int col = 0; col < cols; col++){
-                float pegX = startX + col * pegSpacing + (row % 2 == 0 ? rowOffset : 0);
-                float pegY = startY + row * pegSpacing;
+
+                float x = startX + col * pegSpacing;
+                float y = startY + row * pegSpacing;
+
+                if (row % 2 == 0) {
+                    x += rowOffset;
+                }
 
                 // define peg and stuff (type is static because it doesn't move yet)
                 BodyDef pegDef = new BodyDef();
-                pegDef.type = BodyDef.BodyType.StaticBody;
-                pegDef.position.set(pegX, pegY);
+                pegDef.position.set(x, y);
 
                 Body pegBody = world.createBody(pegDef);
-
-                FixtureDef pegFixtureDef = new FixtureDef();
-                pegFixtureDef.shape = circle;
-                pegFixtureDef.density = 0.5f;  // mass
-                pegFixtureDef.friction = 0.2f;
-                pegFixtureDef.restitution = 0.7f;  // bounce
-
-                pegBody.createFixture(pegFixtureDef);
-
                 // create peg and add to list
-                Peg peg = new Peg(pegBody, pegBody.getPosition(), radius);
+                Peg peg = new Peg(this, pegBody, pegBody.getPosition(), radius, pegID++);
                 pegs.add(peg);
+                pegMap.put(peg.getPegID(), peg);
+
             }
         }
+    }
 
-        circle.dispose();
+
+    public void createBrickPegsPattern(int rows, float pegSpacing, float rowOffset, float startX, float startY, float width, float height) {
+        int cols = TOTAL_PEGS / rows; // do 5 rows
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                // stagger
+                float offsetX = (row % 2 == 0) ? 0 : width / 2;
+                Vector2 position = new Vector2(startX + col * width + offsetX, startY - row * height);
+
+                BodyDef bodyDef = new BodyDef();
+                bodyDef.type = BodyDef.BodyType.StaticBody;
+                bodyDef.position.set(position);
+
+                Body body = world.createBody(bodyDef);
+
+                BrickPeg brickPeg = new BrickPeg(this, body, position, width, height, pegID++);
+                pegs.add(brickPeg);
+                pegMap.put(brickPeg.getPegID(), brickPeg);
+            }
+        }
+    }
+
+    public void addPegToDisappearQueue(Peg peg) {
+        pegsToDisappear.add(peg);
     }
 
     boolean ballShot = false;
     int launchDelay = 60;
     boolean readyToShoot = false;
     private void showBallOutOfBoundsMessage() {
-        Label messageLabel = new Label("OH MY GOD THE BALL HAS LEFT THE SCREEN", skin);
+        Label messageLabel = new Label("PEGS HIT: " + gameContactListener.getPegsHit(), skin);
         messageLabel.setColor(Color.RED);
         messageLabel.setPosition((viewport.getWorldWidth() / 2) - (messageLabel.getWidth()),
             (viewport.getWorldHeight() / 2));
         messageLabel.setFontScale(2f);
         stage.addActor(messageLabel);
     }
+
+    public void endTurn(){
+
+        for (int i = 0; i < pegsToDisappear.size(); i++) {
+            final int index = i;
+            Timer.schedule(new Timer.Task() {
+                @Override
+                public void run() {
+                    Peg peg = pegsToDisappear.get(index);
+                    peg.pegDisappear(getWorld(), getPegMap(), getPegs());
+                }
+            }, i * 0.2f);
+
+        // original end turn, gets rid of all pegs at once
+        /*
+        for (Peg peg : pegs) {
+            if (peg.isHit()) {
+                peg.pegDisappear(getWorld(), getPegMap(), getPegs());
+            }
+        }
+        */
+        }
+    }
+
+
     public void update(float deltaTime) {
 
         if (isPaused) {
@@ -257,6 +300,9 @@ public class GameWorld {
 
         ballLauncher.update(deltaTime);
         ball.update(deltaTime);
+
+
+
         for (Peg peg : pegs) {
             peg.update(deltaTime);
         }
@@ -265,7 +311,7 @@ public class GameWorld {
             ball.getPosition().y > stage.getViewport().getWorldHeight()
             || ball.getPosition().x < 0 ||
             ball.getPosition().x > stage.getViewport().getWorldWidth()) {
-
+            endTurn();
             showBallOutOfBoundsMessage();
         }
 
@@ -274,6 +320,7 @@ public class GameWorld {
             launchDelay--;
         } else {
             readyToShoot = true;
+            ball.getBody().setType(BodyDef.BodyType.DynamicBody);
         }
 
         if (!ballShot && readyToShoot) {
@@ -344,13 +391,27 @@ public class GameWorld {
         return pegs;
     }
 
+    public Map<Integer, Peg> getPegMap(){
+        return pegMap;
+    }
+
     public void renderObjects(ShapeRenderer shapeRenderer) {
         // I have colors here for later when characters might change things up
 
+        shapeRenderer.setColor(Color.BLACK);
+        leftWall.render(shapeRenderer);
+        rightWall.render(shapeRenderer);
+
         // renders pegs using list
-        shapeRenderer.setColor(0, 0, 1, 1);
         for (Peg peg : pegs) {
-            peg.render(shapeRenderer);
+            if(peg.isHit()) {
+                // can also check type here to handle other colors
+                shapeRenderer.setColor(Color.CYAN);
+                peg.render(shapeRenderer);
+            } else {
+                shapeRenderer.setColor(0, 0, 1, 1);
+                peg.render(shapeRenderer);
+            }
         }
 
         shapeRenderer.setColor(1, 0.5f, 0.5f, 1);
@@ -367,6 +428,6 @@ public class GameWorld {
         }
         stage.act(delta);
         stage.draw();
-        //stage.setDebugAll(true);
+        //stage.setDebugAll(true); // pause button is weird and I have no idea why
     }
 }

@@ -2,15 +2,41 @@ package com.emerson.gameobjects;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.*;
 
 public class Ball extends GameObject{
 
+    private World world;
+    private Body body;
     private float radius;
 
-    public Ball(Body body, Vector2 position, float radius) {
+    public Ball(World world, Body body, Vector2 position, float radius) {
         super(body, position, radius * 2, radius * 2);  // width and height are based on diameter
+        this.world = world;
+        this.body = body;
         this.radius = radius;
+
+        //ballBody.setLinearDamping(0);
+        //ballBody.setAngularDamping(0);
+        body.setType(BodyDef.BodyType.StaticBody); // static because the ball can't move until it shoots
+        System.out.println("Ball is static");
+        body.setGravityScale(0); // disable gravity
+        body.setLinearVelocity(0, 0);  // Keep it from moving
+        body.setUserData("ball"); // makes the ball identifiable for collision
+
+        CircleShape circle = new CircleShape();
+        circle.setRadius(radius);
+
+        // fixture that attaches circle to body
+        FixtureDef ballFixtureDef = new FixtureDef();
+        ballFixtureDef.shape = circle;
+        ballFixtureDef.density = 0.85f; // mass 0.85 is good
+        ballFixtureDef.friction = 0.2f; // 0.2 is good
+        ballFixtureDef.restitution = 0.78f;  // bounce 0.75 is good
+
+        body.createFixture(ballFixtureDef);
+
+        circle.dispose();
     }
 
     @Override

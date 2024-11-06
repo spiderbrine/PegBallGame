@@ -4,6 +4,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
+import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.emerson.world.GameWorld;
 
 public class BallLauncher extends GameObject {
@@ -16,14 +18,30 @@ public class BallLauncher extends GameObject {
     private AimingLine aimingLine;
     private Vector2 ballCenter;
 
+    private Body body;
+
     public BallLauncher(GameWorld gameWorld, Body body, Vector2 position, float width, float height) {
 
         super(body, position, width, height);
+        this.body = body;
         this.launchPower = 50f * POWER_MULTIPLIER;
         this.launchDirection = new Vector2(0f, -1f); // down
         this.launchVelocity = new Vector2();
         this.aimingLine = new AimingLine(gameWorld);
         this.ballCenter = new Vector2(position.x + width / 2, position.y);
+
+
+        body.setType(BodyDef.BodyType.KinematicBody); // not affected by world forces but able to be moved manually
+
+        PolygonShape rectangle = new PolygonShape();
+        // weird math shit cause the rectangle goes from the actual middle not bottom left corner
+        rectangle.setAsBox(width / 2, height / 2, new Vector2(width / 2, height / 2), 0);
+
+        FixtureDef ballLauncherFixtureDef = new FixtureDef();
+        ballLauncherFixtureDef.shape = rectangle;
+        body.createFixture(ballLauncherFixtureDef);
+
+        rectangle.dispose();
 
     }
 

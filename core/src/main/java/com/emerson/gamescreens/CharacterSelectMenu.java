@@ -117,7 +117,7 @@ public class CharacterSelectMenu {
                 "the ball becomes electric and each peg hit will arc electricity to 2 nearby pegs.");
         } else if (characterName.equals("Sludge-Ball")) {
             characterImage.setDrawable(new TextureRegionDrawable(new TextureRegion(new Texture("sludgeBall.png"))));
-            characterDescription.setText("When activated: For the rest of the current turn and the next turn, " +
+            characterDescription.setText("When activated: For the rest of the current turn and next turn, " +
                 "the ball becomes covered in corrosive sludge. Each peg hit will decay and drip sludge to the pegs below.");
         }
     }
