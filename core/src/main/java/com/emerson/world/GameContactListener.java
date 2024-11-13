@@ -14,7 +14,10 @@ public class GameContactListener implements ContactListener {
     private Map<Integer, Peg> pegMap = new HashMap<>();
     private List<Peg> pegs = new ArrayList<>();
     private List<Peg> pegsHitList = new ArrayList<>();
+    private List<Peg> orangePegsHitList = new ArrayList<>();
     private int pegsHit = 0;
+    private int orangePegsHit = 0;
+    private int totalOrangePegsHit = 0;
 
     public GameContactListener(Map<Integer, Peg> pegMap, List<Peg> pegs) {
         this.pegMap = pegMap;
@@ -45,6 +48,11 @@ public class GameContactListener implements ContactListener {
             hitPeg.pegHit();
             pegsHitList.add(hitPeg);
             pegsHit++;
+            if (hitPeg.getPegType() == 2) {
+                orangePegsHitList.add(hitPeg);
+                orangePegsHit++;
+                totalOrangePegsHit++;
+            }
         }
     }
 
@@ -78,5 +86,21 @@ public class GameContactListener implements ContactListener {
 
     public int getPegsHit() {
         return pegsHit;
+    }
+
+    public void resetPegsHit() {
+        pegsHit = 0;
+    }
+
+    public int getOrangePegsHit() {
+        return orangePegsHit;
+    }
+
+    public void resetOrangePegsHit() {
+        orangePegsHit = 0;
+    }
+
+    public int getTotalOrangePegsHit() {
+        return totalOrangePegsHit;
     }
 }

@@ -1,9 +1,12 @@
 package com.emerson.world;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
@@ -23,10 +26,7 @@ import com.emerson.gamescreens.CharacterSelectMenu;
 import com.emerson.gamescreens.LevelSelectScreen;
 import com.emerson.pegballgame.PegBallStart;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.emerson.gamescreens.GameScreen.VIRTUAL_HEIGHT;
 import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
@@ -35,6 +35,7 @@ public class GameWorld {
 
     private final PegBallStart GAME;
     private final int TOTAL_PEGS = 100;
+    private final int NUM_ORANGE_PEGS = 25;
 
     private boolean isPaused = true;
 
@@ -55,6 +56,13 @@ public class GameWorld {
     private Obstacle leftWall;
     private Obstacle rightWall;
 
+    // balls (haha)
+    private Queue<Ball> ballPool = new LinkedList<>();
+    private int maxBalls = 50; // max number of balls to account for (bonus level is why its so high)
+    private int ballsLeft;
+    private Label ballsLeftLabel;
+    private Label orangePegsHitLabel;
+
     private Ball ball;
     private List<Peg> pegs = new ArrayList<>();
     private Map<Integer, Peg> pegMap;
@@ -63,6 +71,7 @@ public class GameWorld {
     private int pegIndex = 0;
 
     private BallLauncher ballLauncher;
+    private Vector2 launchPosition = new Vector2(665, 660);
 
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -89,16 +98,13 @@ public class GameWorld {
         pauseSound = Gdx.audio.newSound(Gdx.files.internal("pauseSound.mp3"));
         resumeSound = Gdx.audio.newSound(Gdx.files.internal("resumeSound.mp3"));
 
-        // on the first line, god created the world
         world = new World(new Vector2(0f, -50.0f), true);
 
-        // on the second line, god created collision detection
         gameContactListener = new GameContactListener(pegMap, getPegs());
         world.setContactListener(gameContactListener);
 
         createObstacles();
 
-        // on the third line, god initialized GameObjects
         createPegsStaggeredGrid(10, 40, 20f, viewport.getWorldWidth() / 2.8f, 150f, 7f);
         //createBrickPegsPattern(5, 40, 20f, viewport.getWorldWidth() / 2.8f, 130f, 15f, 10f);
 
@@ -109,10 +115,15 @@ public class GameWorld {
             }
         }, 1.5f);
 
-        createBall(665f, 660f, 7f);
+        //createBall(665f, 660f, 7f);
+        initializeBallPool(10);
+        createBallsLeftLabel();
+        ball = getBall();
         createBallLauncher(640f, 670f, 50f, 35f);
         // randomize ball horizontal aiming for testing
-        ballLauncher.setLaunchDirection((float)(Math.random() * 2) - 1, -1);
+        //ballLauncher.setLaunchDirection((float)(Math.random() * 2) - 1, -1);
+        ballLauncher.setBallLauncherLoaded(true);
+        launchPosition.set(ballLauncher.getPosition().x + ballLauncher.getWidth()/2, ballLauncher.getPosition().y - 10);
 
         pauseButton.setWidth(200);
         pauseButton.setHeight(150);
@@ -176,13 +187,54 @@ public class GameWorld {
     }
 
 
-    public void createBall(float startX, float startY, float radius){
+    public Ball createBall(float startX, float startY, float radius){
         BodyDef ballDef = new BodyDef();
         ballDef.position.set(startX, startY); // position in the world or on screen idk
         Body ballBody = world.createBody(ballDef);
+        ballBody.setActive(false);
 
-        ball = new Ball(getWorld(), ballBody, ballBody.getPosition(), radius);
+        Ball ball = new Ball(getWorld(), ballBody, ballBody.getPosition(), radius);
+        return ball;
+    }
 
+    public void initializeBallPool(int initialCount) {
+        for (int i = 0; i < initialCount; i++) {
+            ballPool.offer(createBall(launchPosition.x, launchPosition.y, 7f));
+            int ballNum = i + 1;
+            System.out.println("Ball " + ballNum + " created");
+        }
+        ballsLeft = initialCount;
+    }
+
+    public Ball getBall() {
+        if (!ballPool.isEmpty()) {
+            Ball ball = ballPool.poll();  // get from pool
+            ball.getBody().setActive(true);  // reactivate the ball
+            ballsLeft--;
+            System.out.println("Balls left" + getBallsLeft());
+            return ball;
+        } else {
+            if (ballPool.size() + 1 <= maxBalls) {
+                // if max balls isnt reached and you need a new one, make a new one
+                System.out.println("New ball created");
+                return createBall(launchPosition.x, launchPosition.y, 7f);
+            } else {
+                System.out.println("Max balls reached");
+                return null;
+            }
+        }
+    }
+
+    public void prepareNextBall(){
+        ball = getBall();
+    }
+
+    public void returnBallToPool(Ball ball) {
+        ball.getBody().setLinearVelocity(0, 0);  // reset velocity
+        ball.setPosition(launchPosition);  // reset position
+        ball.getBody().setType(BodyDef.BodyType.StaticBody);
+        ball.getBody().setActive(false);  // deactivate ball
+        ballPool.offer(ball);  // return to the pool for future reuse
     }
 
     int pegID = 1;
@@ -214,6 +266,22 @@ public class GameWorld {
 
             }
         }
+        // use RNG to do other peg colors and add them to their own lists and remove them from the original list
+        List<Integer> allPegIDs = new ArrayList<>();
+        for (Peg peg : pegs) {
+            allPegIDs.add(peg.getPegID());
+        }
+        Collections.shuffle(allPegIDs);
+
+        List<Integer> orangePegs = new ArrayList<>(allPegIDs.subList(0, NUM_ORANGE_PEGS));
+        for (Peg peg : pegs) {
+            for (int i = 0; i < orangePegs.size(); i++) {
+                if (peg.getPegID() == orangePegs.get(i)) {
+                    peg.setPegType(2);
+                }
+            }
+        }
+
     }
 
 
@@ -243,16 +311,12 @@ public class GameWorld {
         pegsToDisappear.add(peg);
     }
 
-    boolean ballShot = false;
-    int launchDelay = 60;
-    boolean readyToShoot = false;
-    private void showBallOutOfBoundsMessage() {
-        Label messageLabel = new Label("PEGS HIT: " + gameContactListener.getPegsHit(), skin);
-        messageLabel.setColor(Color.RED);
-        messageLabel.setPosition((viewport.getWorldWidth() / 2) - (messageLabel.getWidth()),
-            (viewport.getWorldHeight() / 2));
-        messageLabel.setFontScale(2f);
-        stage.addActor(messageLabel);
+    public boolean checkBallOutOfBounds() {
+        if (ball.getPosition().y < 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public void endTurn(){
@@ -264,20 +328,72 @@ public class GameWorld {
                 public void run() {
                     Peg peg = pegsToDisappear.get(index);
                     peg.pegDisappear(getWorld(), getPegMap(), getPegs());
+                    // gotta find a way to remove the previous pegs and make the list only current turn
                 }
             }, i * 0.2f);
+        }
 
-        // original end turn, gets rid of all pegs at once
-        /*
-        for (Peg peg : pegs) {
-            if (peg.isHit()) {
-                peg.pegDisappear(getWorld(), getPegMap(), getPegs());
-            }
-        }
-        */
-        }
+        returnBallToPool(ball);
     }
 
+    private void showBallOutOfBoundsMessage() {
+        Label messageLabel = new Label("PEGS HIT: " + gameContactListener.getPegsHit(), skin);
+        messageLabel.setColor(Color.RED);
+        messageLabel.setPosition((viewport.getWorldWidth() / 2) - (messageLabel.getWidth()),
+            (viewport.getWorldHeight() / 2));
+        messageLabel.setFontScale(2f);
+        stage.addActor(messageLabel);
+
+        Label messageLabel2 = new Label("ORANGE PEGS HIT: " + gameContactListener.getOrangePegsHit(), skin);
+        messageLabel2.setColor(Color.RED);
+        messageLabel2.setPosition((viewport.getWorldWidth() / 2) - (messageLabel2.getWidth()),
+            (viewport.getWorldHeight() / 2) - 40);
+        messageLabel2.setFontScale(2f);
+        stage.addActor(messageLabel2);
+
+        Timer.schedule(new Timer.Task() {
+            @Override
+            public void run() {
+                messageLabel.remove();
+                messageLabel2.remove();
+                if (ballsLeft == 0) {
+                    Label noMoreBalls = new Label("NO MORE BALLS", skin);
+                    noMoreBalls.setColor(Color.RED);
+                    noMoreBalls.setPosition((viewport.getWorldWidth() / 2) - (noMoreBalls.getWidth()),
+                        (viewport.getWorldHeight() / 2));
+                    noMoreBalls.setFontScale(2f);
+                    stage.addActor(noMoreBalls);
+                } else {
+                    pegsToDisappear.clear();
+                    prepareNextBall();
+                    ballLauncher.setBallLauncherLoaded(true);
+                }
+            }
+        }, (((float)gameContactListener.getPegsHit()) * .2f));
+
+        gameContactListener.resetPegsHit();
+        gameContactListener.resetOrangePegsHit();
+    }
+
+    private void createBallsLeftLabel() {
+        ballsLeftLabel = new Label("Balls left: " + getBallsLeft(), skin);
+        ballsLeftLabel.setColor(Color.RED);
+        ballsLeftLabel.setPosition(225, Gdx.graphics.getHeight() - 50);
+        ballsLeftLabel.setFontScale(1.5f);
+        stage.addActor(ballsLeftLabel);
+
+        orangePegsHitLabel = new Label("Orange Pegs hit: " + gameContactListener.getTotalOrangePegsHit(), skin);
+        orangePegsHitLabel.setColor(Color.RED);
+        orangePegsHitLabel.setPosition(885, Gdx.graphics.getHeight() - 50);
+        orangePegsHitLabel.setFontScale(1.5f);
+        stage.addActor(orangePegsHitLabel);
+    }
+
+    private void updateBallsLeftLabel() {
+        ballsLeftLabel.setText("Balls left: " + getBallsLeft());
+
+        orangePegsHitLabel.setText("Orange Pegs hit: " + gameContactListener.getTotalOrangePegsHit());
+    }
 
     public void update(float deltaTime) {
 
@@ -301,33 +417,37 @@ public class GameWorld {
         ballLauncher.update(deltaTime);
         ball.update(deltaTime);
 
-
-
         for (Peg peg : pegs) {
             peg.update(deltaTime);
         }
 
-        if (ball.getPosition().y < 0 ||
-            ball.getPosition().y > stage.getViewport().getWorldHeight()
-            || ball.getPosition().x < 0 ||
-            ball.getPosition().x > stage.getViewport().getWorldWidth()) {
+        updateBallsLeftLabel();
+
+        // checks if ball is out of bounds
+        if (checkBallOutOfBounds()) {
             endTurn();
             showBallOutOfBoundsMessage();
         }
 
+        if (ballLauncher.getBallLauncherLoaded() && (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT))) {
+            ballLauncher.shootBall(ball); // shoot if space or lmb is pressed
+            ballLauncher.setBallLauncherLoaded(false);  // mark the launcher as unloaded
+        }
+
+        /*
         // ball shooting test mechanism that took me 3 fucking hours
         if (launchDelay > 0) {
             launchDelay--;
         } else {
-            readyToShoot = true;
-            ball.getBody().setType(BodyDef.BodyType.DynamicBody);
+            ballLauncher.setBallLauncherLoaded(true);
         }
 
-        if (!ballShot && readyToShoot) {
+        if (!ballShot && ballLauncher.getBallLauncherLoaded()) {
             ballLauncher.shootBall(ball);
-            readyToShoot = false;
+            ballLauncher.setBallLauncherLoaded(false);
             ballShot = true;
         }
+        */
 
     }
 
@@ -395,8 +515,17 @@ public class GameWorld {
         return pegMap;
     }
 
+    public int getBallsLeftInPool() {
+        int ballsLeft = ballPool.size();
+        //System.out.println("Balls Left: " + ballsLeft);
+        return ballsLeft;
+    }
+
+    public int getBallsLeft() {
+        return ballsLeft;
+    }
+
     public void renderObjects(ShapeRenderer shapeRenderer) {
-        // I have colors here for later when characters might change things up
 
         shapeRenderer.setColor(Color.BLACK);
         leftWall.render(shapeRenderer);
@@ -406,11 +535,21 @@ public class GameWorld {
         for (Peg peg : pegs) {
             if(peg.isHit()) {
                 // can also check type here to handle other colors
-                shapeRenderer.setColor(Color.CYAN);
-                peg.render(shapeRenderer);
+                if (peg.getPegType() == 2) {
+                    shapeRenderer.setColor(Color.SCARLET);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 1) {
+                    shapeRenderer.setColor(Color.CYAN);
+                    peg.render(shapeRenderer);
+                }
             } else {
-                shapeRenderer.setColor(0, 0, 1, 1);
-                peg.render(shapeRenderer);
+                if (peg.getPegType() == 2) {
+                    shapeRenderer.setColor(Color.ORANGE);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 1) {
+                    shapeRenderer.setColor(0, 0, 1, 1);
+                    peg.render(shapeRenderer);
+                }
             }
         }
 
@@ -423,11 +562,14 @@ public class GameWorld {
     }
 
     public void renderStage(float delta) {
+        stage.act(delta);
+        stage.draw();
         if (!characterSelectMenu.characterSelected) {
             characterSelectMenu.render(delta);
         }
-        stage.act(delta);
-        stage.draw();
-        //stage.setDebugAll(true); // pause button is weird and I have no idea why
+        //stage.setDebugAll(true);
+        // pause button is weird and I have no idea why
+        // pause menu also
+        // they dont line up and display properly when screen size changes
     }
 }

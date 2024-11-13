@@ -64,7 +64,6 @@ public class Peg extends GameObject{
     }
 
     public void pegHit() {
-        // change color to red
         // hit flag true
         this.isHit = true;
         gameWorld.addPegToDisappearQueue(this);
