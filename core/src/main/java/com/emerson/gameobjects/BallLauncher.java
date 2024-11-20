@@ -33,7 +33,7 @@ public class BallLauncher extends GameObject {
 
         super(body, position, width, height);
         this.body = body;
-        this.launchPower = 50f * POWER_MULTIPLIER;
+        this.launchPower = 75f * POWER_MULTIPLIER;
         this.launchDirection = new Vector2(0f, -1f); // down
         this.launchVelocity = new Vector2();
         this.aimingLine = new AimingLine(gameWorld);

@@ -18,6 +18,9 @@ public class GameContactListener implements ContactListener {
     private int pegsHit = 0;
     private int orangePegsHit = 0;
     private int totalOrangePegsHit = 0;
+    private int totalScore = 0;
+    private int turnScore = 0;
+    private int scoreMultiplier = 1;
 
     public GameContactListener(Map<Integer, Peg> pegMap, List<Peg> pegs) {
         this.pegMap = pegMap;
@@ -48,7 +51,23 @@ public class GameContactListener implements ContactListener {
             hitPeg.pegHit();
             pegsHitList.add(hitPeg);
             pegsHit++;
-            if (hitPeg.getPegType() == 2) {
+            if (totalOrangePegsHit < 10) {
+                scoreMultiplier = 1;
+            } else if (totalOrangePegsHit >= 10 && totalOrangePegsHit < 15) {
+                scoreMultiplier = 2;
+            } else if (totalOrangePegsHit >= 15 && totalOrangePegsHit < 19) {
+                scoreMultiplier = 3;
+            } else if (totalOrangePegsHit >= 19 && totalOrangePegsHit < 22) {
+                scoreMultiplier = 5;
+            } else if (totalOrangePegsHit >= 22) {
+                scoreMultiplier = 100;
+            }
+            if (hitPeg.getPegType() == 1) {
+                // blue peg on hit stuff
+                turnScore = turnScore + (10 * scoreMultiplier);
+            } else if (hitPeg.getPegType() == 2) {
+                // orange peg on hit stuff
+                turnScore = turnScore + (100 * scoreMultiplier);
                 orangePegsHitList.add(hitPeg);
                 orangePegsHit++;
                 totalOrangePegsHit++;
@@ -102,5 +121,21 @@ public class GameContactListener implements ContactListener {
 
     public int getTotalOrangePegsHit() {
         return totalOrangePegsHit;
+    }
+
+    public int getTurnScore() {
+        return turnScore;
+    }
+
+    public void resetTurnScore() {
+        turnScore = 0;
+    }
+
+    public int getTotalScore() {
+        return totalScore;
+    }
+
+    public void setTotalScore(int newTotalScore) {
+        totalScore = newTotalScore;
     }
 }
