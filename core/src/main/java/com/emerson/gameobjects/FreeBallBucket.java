@@ -52,7 +52,7 @@ public class FreeBallBucket extends GameObject {
             }
         }
 
-        System.out.println("Bucket Position: " + position.x + ", Speed: " + currentSpeed);
+        //System.out.println("Bucket Position: " + position.x + ", Speed: " + currentSpeed);
     }
 
     @Override

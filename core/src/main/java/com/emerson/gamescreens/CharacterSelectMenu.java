@@ -29,6 +29,7 @@ public class CharacterSelectMenu {
     private final Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
 
     public boolean characterSelected = false;
+    private String character;
 
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -70,6 +71,8 @@ public class CharacterSelectMenu {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
                     characterSelected = true;
+                    character = charName;
+                    System.out.println("Char menu set " + character);
                 }
             });
 
@@ -130,6 +133,10 @@ public class CharacterSelectMenu {
     public void remove(){
         characterSelectWindow.setVisible(false);
         System.out.println("Remove character select menu window");
+    }
+
+    public String getCharacter() {
+        return character;
     }
 
     public void resize(int width, int height) {

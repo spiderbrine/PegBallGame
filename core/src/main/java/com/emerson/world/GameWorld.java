@@ -6,6 +6,7 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -21,7 +22,9 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.emerson.gameobjects.*;
 import com.emerson.gamescreens.CharacterSelectMenu;
+import com.emerson.gamescreens.GameScreen;
 import com.emerson.gamescreens.LevelSelectScreen;
+import com.emerson.gamescreens.WinLossMenu;
 import com.emerson.pegballgame.PegBallStart;
 
 import java.util.*;
@@ -32,8 +35,8 @@ import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
 public class GameWorld {
 
     private final PegBallStart GAME;
-    private final int TOTAL_PEGS = 100;
-    private final int NUM_ORANGE_PEGS = 25;
+    private final int TOTAL_PEGS = 100; // 100 total
+    private final int NUM_ORANGE_PEGS = 25; // 25 orange
 
     private boolean isPaused = true;
 
@@ -68,11 +71,13 @@ public class GameWorld {
     private List<Peg> pegsToDisappear = new ArrayList<>();
     private float timeSinceLastDisappear = 0f;
     private int pegIndex = 0;
+    private Peg currentPurplePeg = null;
 
     private FreeBallBucket freeBallBucket;
 
     private BallLauncher ballLauncher;
     private Vector2 launchPosition = new Vector2(665, 660);
+    private int shotsTaken = 0;
 
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -101,7 +106,7 @@ public class GameWorld {
 
         world = new World(new Vector2(0f, -50.0f), true);
 
-        gameContactListener = new GameContactListener(pegMap, getPegs());
+        gameContactListener = new GameContactListener(pegMap, getPegs(), this, stage);
         world.setContactListener(gameContactListener);
 
         createObstacles();
@@ -117,6 +122,7 @@ public class GameWorld {
         }, 1.5f);
 
         //createBall(665f, 660f, 7f);
+        // 10 balls duh
         initializeBallPool(10);
         createLabels();
         ball = getBall();
@@ -158,6 +164,7 @@ public class GameWorld {
         Gdx.input.setInputProcessor(stage); // world gets the input processor back for buttons and game inputs
         System.out.println("world stage has input processor");
         pauseButton.setVisible(true);
+        System.out.println("World get " + characterSelectMenu.getCharacter());
     }
 
     public void createObstacles() {
@@ -183,6 +190,7 @@ public class GameWorld {
         bucketDef.position.set(640, 0);
         Body bucketBody = world.createBody(bucketDef);
         freeBallBucket = new FreeBallBucket(bucketBody, bucketBody.getPosition(), 80, 45, 150);
+        // 150 speed
     }
 
     public void createBallLauncher(float startX, float startY, float width, float height) {
@@ -290,6 +298,7 @@ public class GameWorld {
                 }
             }
         }
+        relocatePurplePeg();
 
     }
 
@@ -345,7 +354,7 @@ public class GameWorld {
                 }
             }, i * 0.2f);
         }
-
+        gameContactListener.resetFreeBalls();
         returnBallToPool(ball);
     }
 
@@ -381,15 +390,20 @@ public class GameWorld {
                 gameContactListener.resetTurnScore();
                 updateScoreLabel();
                 pegsToDisappear.clear();
-                if (ballsLeft == 0) {
+                relocatePurplePeg();
+                if (ballsLeft == 0 && !checkOrangePegs()) {
+                    showWinLossMessage();
+                    /*
                     Label noMoreBalls = new Label("NO MORE BALLS", skin);
                     noMoreBalls.setColor(Color.RED);
                     noMoreBalls.setPosition((viewport.getWorldWidth() / 2) - (noMoreBalls.getWidth()),
                         (viewport.getWorldHeight() / 2));
                     noMoreBalls.setFontScale(2f);
                     stage.addActor(noMoreBalls);
+
+                     */
                 } else if (checkOrangePegs()) {
-                    showWinMessage();
+                    showWinLossMessage();
                 } else {
                     prepareNextBall();
                     ballLauncher.setBallLauncherLoaded(true);
@@ -432,10 +446,29 @@ public class GameWorld {
     }
 
     private boolean checkOrangePegs() {
-        return gameContactListener.getTotalOrangePegsHit() == 25;
+        return gameContactListener.getTotalOrangePegsHit() == NUM_ORANGE_PEGS;
     }
 
-    public void showWinMessage() {
+    public void giveFreeBall(Vector2 position) {
+        Label messageLabel = new Label("FREE BALL!!!", skin);
+        messageLabel.setColor(1, 0.5f, 0.5f, 1);
+        messageLabel.setPosition(position.x  - (messageLabel.getWidth()), position.y);
+        messageLabel.setFontScale(1.5f);
+        stage.addActor(messageLabel);
+        ballsLeft++;
+        Timer.schedule(new Timer.Task() {
+            @Override
+            public void run() {
+                messageLabel.remove();
+            }
+        },2f);
+    }
+
+    public void showWinLossMessage() {
+        WinLossMenu menu = new WinLossMenu(GAME, checkOrangePegs(), characterSelectMenu.getCharacter(), gameContactListener.getTotalScore(),
+            shotsTaken, skin);
+        stage.addActor(menu);
+        /*
         Label winMessage = new Label("YOU WIN!!!", skin);
         winMessage.setColor(Color.GREEN);
         winMessage.setPosition((viewport.getWorldWidth() / 2) - (winMessage.getWidth()),
@@ -449,6 +482,8 @@ public class GameWorld {
             (viewport.getWorldHeight() / 2) - 40);
         scoreWinLabel.setFontScale(2f);
         stage.addActor(scoreWinLabel);
+
+         */
     }
 
     public void update(float deltaTime) {
@@ -485,7 +520,7 @@ public class GameWorld {
         if (checkBallOutOfBounds() && freeBallBucket.isBallInBucket(ball)) {
             endTurn();
             showBallOutOfBoundsMessage();
-            ballsLeft++;
+            giveFreeBall(new Vector2((viewport.getWorldWidth() / 2),50));
         } else if (checkBallOutOfBounds()) {
             endTurn();
             showBallOutOfBoundsMessage();
@@ -494,6 +529,7 @@ public class GameWorld {
         if (ballLauncher.getBallLauncherLoaded() && (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT))) {
             ballLauncher.shootBall(ball); // shoot if space or lmb is pressed
             ballLauncher.setBallLauncherLoaded(false);  // mark the launcher as unloaded
+            shotsTaken++;
         }
 
         /*
@@ -564,6 +600,16 @@ public class GameWorld {
         stage.addActor(pauseMenu);
     }
 
+    private void retryLevel() {
+        // Logic to restart the current level
+        GAME.setScreen(new GameScreen(GAME));
+    }
+
+    private void goToLevelSelect() {
+        // Logic to navigate back to the level select screen
+        GAME.setScreen(new LevelSelectScreen(GAME));
+    }
+
 
     public World getWorld() {
         return world;
@@ -575,6 +621,29 @@ public class GameWorld {
 
     public Map<Integer, Peg> getPegMap(){
         return pegMap;
+    }
+
+    public void relocatePurplePeg() {
+        // reset current purple to blue if it exists
+        if (currentPurplePeg != null) {
+            currentPurplePeg.setPegType(1);
+        }
+
+        // compile all blues currently on board
+        List<Peg> bluePegs = new ArrayList<>();
+        for (Peg peg : pegs) {
+            if (peg.getPegType() == 1) {
+                bluePegs.add(peg);
+            }
+        }
+
+        // choose random blue to be purple
+        if (!bluePegs.isEmpty()) {
+            int randomIndex = MathUtils.random(bluePegs.size() - 1);
+            Peg newPurplePeg = bluePegs.get(randomIndex);
+            newPurplePeg.setPegType(3);
+            currentPurplePeg = newPurplePeg;
+        }
     }
 
     public int getBallsLeftInPool() {
@@ -597,7 +666,10 @@ public class GameWorld {
         for (Peg peg : pegs) {
             if(peg.isHit()) {
                 // can also check type here to handle other colors
-                if (peg.getPegType() == 2) {
+                if (peg.getPegType() == 3) {
+                    shapeRenderer.setColor(Color.PINK);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 2) {
                     shapeRenderer.setColor(Color.SCARLET);
                     peg.render(shapeRenderer);
                 } else if (peg.getPegType() == 1) {
@@ -605,7 +677,10 @@ public class GameWorld {
                     peg.render(shapeRenderer);
                 }
             } else {
-                if (peg.getPegType() == 2) {
+                if (peg.getPegType() == 3) {
+                    shapeRenderer.setColor(Color.MAGENTA);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 2) {
                     shapeRenderer.setColor(Color.ORANGE);
                     peg.render(shapeRenderer);
                 } else if (peg.getPegType() == 1) {
