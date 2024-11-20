@@ -87,8 +87,9 @@ public class GameContactListener implements ContactListener {
                 orangePegsHit++;
                 totalOrangePegsHit++;
             } else if (hitPeg.getPegType() == 3) {
-                turnScore = turnScore + ((10 * scoreMultiplier) * 50);
-                Label messageLabel = new Label("BONUS POINTS!", skin);
+                int bonusPoints = (10 * scoreMultiplier) * 50;
+                turnScore = turnScore + bonusPoints;
+                Label messageLabel = new Label("BONUS POINTS! " + bonusPoints, skin);
                 messageLabel.setColor(Color.PURPLE);
                 messageLabel.setPosition((hitPeg.getPosition().x) - (messageLabel.getWidth() / 2),
                     (hitPeg.getPosition().y + 10));
