@@ -135,8 +135,17 @@ public class CharacterSelectMenu {
         System.out.println("Remove character select menu window");
     }
 
+    public void reset() {
+        characterSelected = false;
+        characterSelectWindow.setVisible(false);
+    }
+
     public String getCharacter() {
         return character;
+    }
+
+    public void setCharacterSelected(boolean characterSelected) {
+        this.characterSelected = characterSelected;
     }
 
     public void resize(int width, int height) {

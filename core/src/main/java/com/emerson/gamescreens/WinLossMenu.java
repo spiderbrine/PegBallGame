@@ -5,13 +5,16 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.emerson.pegballgame.PegBallStart;
+import com.emerson.world.Level;
+import com.emerson.world.LevelManager;
 
 public class WinLossMenu extends Window {
 
     private final PegBallStart GAME;
     private final Skin SKIN;
+    private LevelManager levelManager;
 
-    public WinLossMenu(PegBallStart game, boolean isVictory, String characterUsed, int score, int shots, Skin skin) {
+    public WinLossMenu(PegBallStart game, LevelManager levelManager, boolean isVictory, String characterUsed, int score, int shots, Skin skin) {
         super(isVictory ? "YOU WIN!" : "Game Over!", skin);
         this.GAME = game;
         this.SKIN = skin;
@@ -36,7 +39,10 @@ public class WinLossMenu extends Window {
         retryButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                GAME.setScreen(new GameScreen(GAME));// retry callback
+                for (Level level : GAME.getLevelManager().getLevels()) {
+                    level.reset();
+                }
+                GAME.setScreen(new GameScreen(GAME, levelManager, levelManager.getCurrentLevelIndex()));// retry callback
                 remove();
             }
         });

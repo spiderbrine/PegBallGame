@@ -8,9 +8,9 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.*;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.*;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -35,8 +35,10 @@ import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
 public class GameWorld {
 
     private final PegBallStart GAME;
-    private final int TOTAL_PEGS = 100; // 100 total
-    private final int NUM_ORANGE_PEGS = 25; // 25 orange
+    private LevelManager levelManager;
+    private final int TOTAL_PEGS; // 100 total
+    private final int NUM_ORANGE_PEGS; // 25 orange
+    private static final float PROXIMITY_THRESHOLD = 35f;
 
     private boolean isPaused = true;
 
@@ -63,38 +65,60 @@ public class GameWorld {
     private int ballsLeft;
     private Label ballsLeftLabel;
     private Label scoreLabel;
+    private Label multiplierLabel;
     private Label orangePegsHitLabel;
+    private Label orangePegsLeftLabel;
 
     private Ball ball;
     private List<Peg> pegs = new ArrayList<>();
+    private List<Peg> orangePegsList = new ArrayList<>();
     private Map<Integer, Peg> pegMap;
     private List<Peg> pegsToDisappear = new ArrayList<>();
     private float timeSinceLastDisappear = 0f;
     private int pegIndex = 0;
     private Peg currentPurplePeg = null;
+    private Peg focusedPeg = null;
+
+    private boolean endCalled = false;
+    private List<Ball> pegBalls = new ArrayList<>();
+    private int frenzyScore = 0;
 
     private FreeBallBucket freeBallBucket;
+    private ScoreBucket scoreBucket1;
+    private ScoreBucket scoreBucket2;
+    private ScoreBucket scoreBucket3;
+    private ScoreBucket scoreBucket4;
+    private ScoreBucket scoreBucket5;
+    private List<ScoreBucket> scoreBucketList = new ArrayList<>();
 
     private BallLauncher ballLauncher;
-    private Vector2 launchPosition = new Vector2(665, 660);
+    private Vector2 launchPosition = new Vector2(615, 660);
     private int shotsTaken = 0;
 
+    private boolean isZooming = false;
     private OrthographicCamera camera;
     private Viewport viewport;
 
-    public GameWorld(PegBallStart game) {
+    public GameWorld(PegBallStart game, LevelManager levelManager, int totalPegs, int orangePegs) {
 
         pauseButton.setVisible(false);
 
         this.GAME = game;
+        this.levelManager = GAME.getLevelManager();
         stage = new Stage(new ScreenViewport());
         pegMap = new HashMap<>();
+
+        TOTAL_PEGS = totalPegs;
+        NUM_ORANGE_PEGS = orangePegs;
 
         camera = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
         viewport.apply();
         camera.position.set(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, 0);
+        camera.setToOrtho(false, viewport.getWorldWidth(), viewport.getWorldHeight());
         camera.update();
+        System.out.println("Initial Camera Position: " + camera.position);
+        System.out.println("Initial Camera Zoom: " + camera.zoom);
 
         characterSelectStage = new Stage();
         characterSelectMenu = new CharacterSelectMenu(characterSelectStage);
@@ -109,11 +133,13 @@ public class GameWorld {
         gameContactListener = new GameContactListener(pegMap, getPegs(), this, stage);
         world.setContactListener(gameContactListener);
 
-        createObstacles();
+        //createObstacles();
 
-        createPegsStaggeredGrid(10, 40, 20f, viewport.getWorldWidth() / 2.8f, 150f, 7f);
+
+        //createPegsStaggeredGrid(10, 40, 20f, viewport.getWorldWidth() / 2.8f, 150f, 7f);
         //createBrickPegsPattern(5, 40, 20f, viewport.getWorldWidth() / 2.8f, 130f, 15f, 10f);
 
+        /*
         Timer.schedule(new Timer.Task() {
             @Override
             public void run(){
@@ -121,18 +147,22 @@ public class GameWorld {
             }
         }, 1.5f);
 
+         */
+
+        createBallLauncher(640f - 25f, 670f, 50f, 35f);
+        ballLauncher.setLaunchPower(100f); // 100 is good, but tweak maybe when aim line is added
+        // randomize ball horizontal aiming for testing
+        //ballLauncher.setLaunchDirection((float)(Math.random() * 2) - 1, -1);
+        ballLauncher.setBallLauncherLoaded(true);
+        launchPosition.set((ballLauncher.getPosition().x + (ballLauncher.getWidth()/2f)), ballLauncher.getPosition().y - 10);
         //createBall(665f, 660f, 7f);
         // 10 balls duh
         initializeBallPool(10);
         createLabels();
         ball = getBall();
-        createBallLauncher(640f, 670f, 50f, 35f);
-        // randomize ball horizontal aiming for testing
-        //ballLauncher.setLaunchDirection((float)(Math.random() * 2) - 1, -1);
-        ballLauncher.setBallLauncherLoaded(true);
-        launchPosition.set(ballLauncher.getPosition().x + ballLauncher.getWidth()/2, ballLauncher.getPosition().y - 10);
-        createFreeBallBucket();
+        //createFreeBallBucket();
 
+        pauseButton.setTouchable(Touchable.enabled);
         pauseButton.setWidth(200);
         pauseButton.setHeight(150);
         pauseButton.setColor(Color.LIME);
@@ -142,9 +172,11 @@ public class GameWorld {
         pauseButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                System.out.println("THE WORLD! STOP TIME!");
                 togglePause();
                 pauseSound.play();
                 showPauseMenu();
+                event.stop();
             }
         });
         stage.addActor(pauseButton);
@@ -187,9 +219,9 @@ public class GameWorld {
 
     public void createFreeBallBucket() {
         BodyDef bucketDef = new BodyDef();
-        bucketDef.position.set(640, 0);
+        bucketDef.position.set(640 - 40, 0);
         Body bucketBody = world.createBody(bucketDef);
-        freeBallBucket = new FreeBallBucket(bucketBody, bucketBody.getPosition(), 80, 45, 150);
+        freeBallBucket = new FreeBallBucket(world, bucketBody, bucketBody.getPosition(), 80, 45, 150);
         // 150 speed
     }
 
@@ -295,6 +327,7 @@ public class GameWorld {
             for (int i = 0; i < orangePegs.size(); i++) {
                 if (peg.getPegID() == orangePegs.get(i)) {
                     peg.setPegType(2);
+                    orangePegsList.add(peg);
                 }
             }
         }
@@ -330,18 +363,31 @@ public class GameWorld {
     }
 
     public boolean checkBallOutOfBounds() {
-        if (ball.getPosition().y < 0) {
-            return true;
-        } else {
-            return false;
+        return ball.getPosition().y < 0;
+    }
+
+    public boolean checkPegBallOutOfBounds(Ball pegBall) {
+        return pegBall.getPosition().y < 0;
+    }
+
+    public boolean checkPegBallsOutOfBounds() {
+        for (Ball pegBall : pegBalls) {
+            if (pegBall.getPosition().y >= 0) {
+                // if any ball is above or equal to 0, they are not out of bounds
+                return false;
+            }
         }
+        // all balls are below 0 out of bounds.
+        return true;
     }
 
     public void endTurn(){
 
         // update score message
         int newTotalScore = gameContactListener.getTurnScore() * gameContactListener.getPegsHit();
+        System.out.println("Turn score: " + newTotalScore);
         int totalScore = gameContactListener.getTotalScore() + newTotalScore;
+        System.out.println("Total score: " + totalScore);
         gameContactListener.setTotalScore(totalScore);
 
         for (int i = 0; i < pegsToDisappear.size(); i++) {
@@ -403,7 +449,19 @@ public class GameWorld {
 
                      */
                 } else if (checkOrangePegs()) {
-                    showWinLossMessage();
+                    // might have to change something up here for ending sequence with score buckets
+                    Label frenzyScoreLabel = new Label("FRENZY SCORE: " + frenzyScore, skin);
+                    frenzyScoreLabel.setColor(Color.ORANGE);
+                    frenzyScoreLabel.setPosition((VIRTUAL_WIDTH / 2) - (frenzyScoreLabel.getWidth()), (VIRTUAL_HEIGHT / 2) + (VIRTUAL_HEIGHT / 4));
+                    frenzyScoreLabel.setFontScale(2f);
+                    stage.addActor(frenzyScoreLabel);
+                    Timer.schedule(new Timer.Task() {
+                        @Override
+                        public void run() {
+                            frenzyScoreLabel.remove();
+                            showWinLossMessage();
+                        }
+                    },5f);
                 } else {
                     prepareNextBall();
                     ballLauncher.setBallLauncherLoaded(true);
@@ -428,17 +486,33 @@ public class GameWorld {
         scoreLabel.setFontScale(1.5f);
         stage.addActor(scoreLabel);
 
+        multiplierLabel = new Label("Multiplier: " + gameContactListener.getScoreMultiplier() + "x", skin);
+        multiplierLabel.setColor(Color.BLACK);
+        multiplierLabel.setPosition(425, Gdx.graphics.getHeight() - 70);
+        multiplierLabel.setFontScale(1.5f);
+        stage.addActor(multiplierLabel);
+
         orangePegsHitLabel = new Label("Orange Pegs hit: " + gameContactListener.getTotalOrangePegsHit(), skin);
         orangePegsHitLabel.setColor(Color.ORANGE);
         orangePegsHitLabel.setPosition(885, Gdx.graphics.getHeight() - 50);
         orangePegsHitLabel.setFontScale(1.3f);
         stage.addActor(orangePegsHitLabel);
+
+        orangePegsLeftLabel = new Label("Orange Pegs left: " + orangePegsList.size(), skin);
+        orangePegsLeftLabel.setColor(Color.ORANGE);
+        orangePegsLeftLabel.setPosition(885, Gdx.graphics.getHeight() - 70);
+        orangePegsLeftLabel.setFontScale(1.3f);
+        stage.addActor(orangePegsLeftLabel);
     }
 
     private void updateLabels() {
         ballsLeftLabel.setText("Balls left: " + getBallsLeft());
 
+        multiplierLabel.setText("Multiplier: " + gameContactListener.getScoreMultiplier() + "x");
+
         orangePegsHitLabel.setText("Orange Pegs hit: " + gameContactListener.getTotalOrangePegsHit());
+
+        orangePegsLeftLabel.setText("Orange Pegs left: " + orangePegsList.size());
     }
 
     private void updateScoreLabel() {
@@ -464,8 +538,141 @@ public class GameWorld {
         },2f);
     }
 
+    private void checkProximityToFinalOrangePeg() {
+        if (orangePegsList.size() == 1) {
+            Peg finalPeg = orangePegsList.get(0);
+            float distance = ball.getPosition().dst(finalPeg.getPosition());
+
+            if (distance < PROXIMITY_THRESHOLD) {
+                System.out.println("Distance in proximity with Peg: " + finalPeg + " " + distance);
+                triggerFinalPegSequence(finalPeg);
+            } else {
+                // zoom back out / resume time normal
+                untriggerFinalPegSequence();
+            }
+        } else if (orangePegsList.isEmpty() && !endCalled) {
+            // if no orange pegs left
+            // ending sequence
+            // for now just resume time/cam to normal after 2 seconds
+            // maybe test freezing (out here) then resuming in the timer, (works btw)
+            endLevelSequence();
+        }
+    }
+
+    private void triggerFinalPegSequence(Peg finalPeg) {
+        System.out.println("Sequence triggered");
+        timeScale = 0.2f;
+        System.out.println("Time slowed");
+
+    }
+
+    private void untriggerFinalPegSequence() {
+        if (!endCalled) {
+            timeScale = 1f;
+        }
+    }
+
+    private void endLevelSequence() {
+        endCalled = true;
+        System.out.println("ALL ORANGE HIT!!!");
+        timeScale = 0f;
+        Label feverLabel = new Label("PEGBALL FRENZY!!!", skin);
+        feverLabel.setColor(Color.ORANGE);
+        feverLabel.setPosition((VIRTUAL_WIDTH / 2) - (feverLabel.getWidth()), (VIRTUAL_HEIGHT / 2) + (VIRTUAL_HEIGHT / 4));
+        feverLabel.setFontScale(2f);
+        stage.addActor(feverLabel);
+        Timer.schedule(new Timer.Task() {
+            @Override
+            public void run() {
+                enableScoreBuckets();
+                feverLabel.remove();
+                makePegBalls();
+                timeScale = 3f;
+                world.setGravity(new Vector2(0,world.getGravity().y/4f));
+                System.out.println("Time sped up");
+                //enableScoreBuckets();
+            }
+        },2f);
+
+    }
+
+    private Ball transformPegToBall(Peg peg) {
+        peg.pegDisappear(world, pegMap, pegs);
+        Ball newBall = createBall(peg.getPosition().x, peg.getPosition().y, 7f);
+        // push ball up, in a random direction horizontally
+        newBall.getBody().setType(BodyDef.BodyType.DynamicBody);
+        newBall.getBody().setGravityScale(1);
+        pegBalls.add(newBall);
+        return newBall;
+    }
+
+    private void makePegBalls() {
+        for (Peg peg : pegs) {
+            peg.pegDisappear(getWorld(), getPegMap(), getPegs());
+            Timer.schedule(new Timer.Task() {
+                @Override
+                public void run() {
+                    Ball pegBall = transformPegToBall(peg);
+                    // might wanna change density or something to create more variance, maybe restitution values
+                    pegBall.getBody().setActive(true);
+                    float horizontalImpulse = ((float)(Math.random() * 5) - 1) * 11250f; // Small random horizontal variance
+                    float verticalImpulse = 10f * 11250f; // Strong upward force
+                    pegBall.getBody().applyLinearImpulse(new Vector2(horizontalImpulse, verticalImpulse), pegBall.getBody().getWorldCenter(), true);
+                }
+            }, 0.2f);
+        }
+    }
+
+    private void enableScoreBuckets () {
+        // remove free ball bucket
+        if (freeBallBucket != null) {
+            freeBallBucket.destroyWalls();
+            world.destroyBody(freeBallBucket.getBody());
+            freeBallBucket = null;
+        }
+
+        // create score buckets
+        // check for ball and pegBalls leaving bounds through buckets
+        float bucketWidth = 96f;
+        float bucketHeight = 45f;
+        float spacing = 0f;
+        float screenBottom = 0f;
+        int[] scores;
+        if (pegs.size() >= 60) {
+            scores = new int[]{1000, 2000, 3000, 2000, 1000};
+        } else if (60 > pegs.size() && pegs.size() >= 50) {
+            scores = new int[]{2500, 3000, 4000, 3000, 2500};
+        } else if (50 > pegs.size() && pegs.size() >= 40) {
+            scores = new int[]{3000, 4000, 5000, 4000, 3000};
+        } else if (40 > pegs.size() && pegs.size() >= 30) {
+            scores = new int[]{4000, 5000, 6000, 5000, 4000};
+        } else if (30 > pegs.size() && pegs.size() >= 20) {
+            scores = new int[]{5000, 6500, 7000, 6500, 5000};
+        } else if (20 > pegs.size() && pegs.size() >= 10) {
+            scores = new int[]{6000, 7000, 8000, 7000, 6000};
+        } else if (10 > pegs.size() && pegs.size() >= 5) {
+            scores = new int[]{7500, 9000, 15000, 9000, 7500};
+        } else {
+            scores = new int[]{10000, 15000, 100000, 15000, 10000};
+        }
+        float x;
+        BodyDef scoreBucketDef = new BodyDef();
+        for (int i = 0; i < 5; i++) {
+            x = i * (bucketWidth + spacing) + 400;
+            scoreBucketDef.position.set(x, screenBottom);
+            Body scoreBucketBody = world.createBody(scoreBucketDef);
+            ScoreBucket scoreBucket = new ScoreBucket(world, scoreBucketBody, new Vector2(x, screenBottom), bucketWidth, bucketHeight, scores[i]);
+            scoreBucketList.add(scoreBucket);
+            Label messageLabel = new Label("" + scores[i], skin);
+            messageLabel.setColor(Color.BLACK);
+            messageLabel.setPosition((x + (bucketWidth / 2)) - (messageLabel.getWidth() - 10), screenBottom + 20);
+            messageLabel.setFontScale(1.5f);
+            stage.addActor(messageLabel);
+        }
+    }
+
     public void showWinLossMessage() {
-        WinLossMenu menu = new WinLossMenu(GAME, checkOrangePegs(), characterSelectMenu.getCharacter(), gameContactListener.getTotalScore(),
+        WinLossMenu menu = new WinLossMenu(GAME, GAME.getLevelManager(), checkOrangePegs(), characterSelectMenu.getCharacter(), gameContactListener.getTotalScore(),
             shotsTaken, skin);
         stage.addActor(menu);
         /*
@@ -486,7 +693,9 @@ public class GameWorld {
          */
     }
 
+    private float timeScale = 1f;
     public void update(float deltaTime) {
+        deltaTime *= timeScale;
 
         if (isPaused) {
             if (!characterSelected) {
@@ -503,33 +712,107 @@ public class GameWorld {
         int velocityIterations = 6;  //
         int positionIterations = 2;  //
 
-        world.step(timeStep, velocityIterations, positionIterations);
+        world.step(timeStep * timeScale, velocityIterations, positionIterations);
 
-        freeBallBucket.update(deltaTime);
+        if (!endCalled) {
+            freeBallBucket.update(deltaTime);
+        }
         ballLauncher.update(deltaTime);
         ball.update(deltaTime);
+
+        if (endCalled) {
+            for (Ball pegBall : pegBalls) {
+                if (pegBall != null) {
+                    pegBall.update(deltaTime);
+                }
+            }
+            for (ScoreBucket scoreBucket : scoreBucketList) {
+                scoreBucket.update(deltaTime);
+            }
+            Iterator<Ball> pegBallIterator = pegBalls.iterator();
+            while (pegBallIterator.hasNext()) {
+                Ball pegBall = pegBallIterator.next();
+                for (ScoreBucket scoreBucket : scoreBucketList) {
+                    if (checkPegBallOutOfBounds(pegBall) && scoreBucket.isBallInBucket(pegBall)) {
+                        frenzyScore += scoreBucket.getScoreValue();
+                        System.out.println("Frenzy score: " + frenzyScore);
+                        int totalScore = gameContactListener.getTotalScore() + scoreBucket.getScoreValue();
+                        System.out.println("Total score " + gameContactListener.getTotalScore() + " + bucket value: " + scoreBucket.getScoreValue());
+                        System.out.println("New total: " + totalScore);
+                        gameContactListener.setTotalScore(totalScore);
+                        pegBall.destroy();
+                        pegBallIterator.remove();
+                        break;
+                    }
+                }
+            }
+        }
 
         for (Peg peg : pegs) {
             peg.update(deltaTime);
         }
 
+        if (gameContactListener.getTotalOrangePegsHit() < 10) {
+            gameContactListener.setScoreMultiplier(1);
+        } else if (gameContactListener.getTotalOrangePegsHit() >= 10 && gameContactListener.getTotalOrangePegsHit() < 15) {
+            gameContactListener.setScoreMultiplier(2);
+        } else if (gameContactListener.getTotalOrangePegsHit() >= 15 && gameContactListener.getTotalOrangePegsHit() < 19) {
+            gameContactListener.setScoreMultiplier(3);
+        } else if (gameContactListener.getTotalOrangePegsHit() >= 19 && gameContactListener.getTotalOrangePegsHit() < 22) {
+            gameContactListener.setScoreMultiplier(5);
+        } else if (gameContactListener.getTotalOrangePegsHit() >= 22) {
+            gameContactListener.setScoreMultiplier(10);
+        }
+
         updateLabels();
 
+        checkProximityToFinalOrangePeg();
 
-        // checks if ball is out of bounds
-        if (checkBallOutOfBounds() && freeBallBucket.isBallInBucket(ball)) {
+        // checks if end has started and if ball is out of bounds
+        if (!endCalled) {
+            if (checkBallOutOfBounds() && freeBallBucket.isBallInBucket(ball)) {
+                endTurn();
+                showBallOutOfBoundsMessage();
+                giveFreeBall(new Vector2((viewport.getWorldWidth() / 2),50));
+            } else if (pegBalls.isEmpty() && checkBallOutOfBounds()) {
+                endTurn();
+                showBallOutOfBoundsMessage();
+            }
+        } else {
+            if (checkBallOutOfBounds() && checkPegBallsOutOfBounds()) {
+                endTurn();
+                showBallOutOfBoundsMessage();
+            }
+        }
+
+        /*
+        if ((checkBallOutOfBounds() && freeBallBucket.isBallInBucket(ball)) && (freeBallBucket != null)) {
             endTurn();
             showBallOutOfBoundsMessage();
             giveFreeBall(new Vector2((viewport.getWorldWidth() / 2),50));
-        } else if (checkBallOutOfBounds()) {
+        } else if ((pegBalls.isEmpty() && !endCalled) && checkBallOutOfBounds()) {
+            endTurn();
+            showBallOutOfBoundsMessage();
+        } else if (endCalled && (checkBallOutOfBounds() && checkPegBallsOutOfBounds())) {
             endTurn();
             showBallOutOfBoundsMessage();
         }
 
+         */
+
         if (ballLauncher.getBallLauncherLoaded() && (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT))) {
+            Vector2 cursorPosition = stage.screenToStageCoordinates(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
+
+            // check if cursor is over pause
+            if (cursorPosition.x >= pauseButton.getX() && cursorPosition.x <= pauseButton.getX() + pauseButton.getWidth() &&
+                cursorPosition.y >= pauseButton.getY() && cursorPosition.y <= pauseButton.getY() + pauseButton.getHeight()) {
+                System.out.println("Mouse is over the pause button.");
+                return; // dont fucking shoot
+            }
             ballLauncher.shootBall(ball); // shoot if space or lmb is pressed
             ballLauncher.setBallLauncherLoaded(false);  // mark the launcher as unloaded
             shotsTaken++;
+
         }
 
         /*
@@ -548,6 +831,27 @@ public class GameWorld {
         */
 
     }
+
+    /*
+    private void updateCamera(float delta) {
+        if (isZooming && focusedPeg != null) {
+            Vector2 targetPosition = focusedPeg.getPosition();
+            System.out.println("Camera focusing on peg at: " + targetPosition);
+            camera.position.lerp(new Vector3(targetPosition, 0), 0.1f); // smooth moves
+            System.out.println("Camera position: " + camera.position);
+            camera.zoom = MathUtils.lerp(camera.zoom, 0.5f, 0.1f); // zoom
+            System.out.println("Camera zoom: " + camera.zoom);
+            System.out.println("Zooming: " + isZooming + ", Focused Peg: " + (focusedPeg != null ? focusedPeg.getPosition() : "None"));
+            camera.update();
+
+            if (Math.abs(camera.zoom - 0.5f) < 0.01f) { // check zoom is near target
+                isZooming = false; // stop zoomin
+                System.out.println("stop zoomin");
+            }
+        }
+    }
+
+     */
 
     public void togglePause() {
         if (isPaused) { // if the game is paused
@@ -588,6 +892,10 @@ public class GameWorld {
         quitToLevelSelectButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                togglePause();
+                pauseMenu.remove();
+                reset();
+                Gdx.input.setInputProcessor(null);
                 GAME.setScreen(new LevelSelectScreen(GAME)); // switch to level select menu
             }
         });
@@ -600,9 +908,22 @@ public class GameWorld {
         stage.addActor(pauseMenu);
     }
 
+    public void reset() {
+        if (stage != null) {
+            stage.clear();
+        }
+        Gdx.input.setInputProcessor(null);
+        timeScale = 1f;
+        isPaused = false;
+        characterSelected = false;
+        characterSelectMenu.reset();
+
+        Gdx.input.setInputProcessor(null);
+    }
+
     private void retryLevel() {
         // Logic to restart the current level
-        GAME.setScreen(new GameScreen(GAME));
+        GAME.setScreen(new GameScreen(GAME, GAME.getLevelManager(), GAME.getLevelManager().getCurrentLevelIndex()));
     }
 
     private void goToLevelSelect() {
@@ -613,6 +934,10 @@ public class GameWorld {
 
     public World getWorld() {
         return world;
+    }
+
+    public float getWorldWidth() {
+        return viewport.getWorldWidth();
     }
 
     public List<Peg> getPegs(){
@@ -650,6 +975,11 @@ public class GameWorld {
         int ballsLeft = ballPool.size();
         //System.out.println("Balls Left: " + ballsLeft);
         return ballsLeft;
+    }
+
+    public void removeOrangePegFromList(Peg peg) {
+        // remove orange peg from orange peg list list
+        orangePegsList.remove(peg);
     }
 
     public int getBallsLeft() {
@@ -690,11 +1020,52 @@ public class GameWorld {
             }
         }
 
-        shapeRenderer.setColor(Color.BROWN);
-        freeBallBucket.render(shapeRenderer);
+        if (!endCalled) {
+            shapeRenderer.setColor(Color.BROWN);
+            freeBallBucket.render(shapeRenderer);
+        }
+
+        for (ScoreBucket scoreBucket : scoreBucketList) {
+
+            if (scoreBucket.getScoreValue() == 1000) {
+                shapeRenderer.setColor(Color.DARK_GRAY);
+            } else if (scoreBucket.getScoreValue() == 2000) {
+                shapeRenderer.setColor(Color.GRAY);
+            } else if (scoreBucket.getScoreValue() == 2500) {
+                shapeRenderer.setColor(Color.LIGHT_GRAY);
+            } else if (scoreBucket.getScoreValue() == 3000) {
+                shapeRenderer.setColor(Color.BLUE);
+            } else if (scoreBucket.getScoreValue() == 4000) {
+                shapeRenderer.setColor(Color.CYAN);
+            } else if (scoreBucket.getScoreValue() == 5000) {
+                shapeRenderer.setColor(Color.SKY);
+            } else if (scoreBucket.getScoreValue() == 6000) {
+                shapeRenderer.setColor(Color.CHARTREUSE);
+            } else if (scoreBucket.getScoreValue() == 6500) {
+                shapeRenderer.setColor(1f, .5f, .02f, 1f);
+            } else if (scoreBucket.getScoreValue() == 7000) {
+                shapeRenderer.setColor(Color.GOLDENROD);
+            } else if (scoreBucket.getScoreValue() == 7500) {
+                shapeRenderer.setColor(Color.GOLD);
+            } else if (scoreBucket.getScoreValue() == 8000) {
+                shapeRenderer.setColor(Color.MAROON);
+            } else if (scoreBucket.getScoreValue() == 9000) {
+                shapeRenderer.setColor(Color.PINK);
+            } else if (scoreBucket.getScoreValue() == 10000) {
+                shapeRenderer.setColor(Color.MAGENTA);
+            } else if (scoreBucket.getScoreValue() == 15000) {
+                shapeRenderer.setColor(Color.PURPLE);
+            } else if (scoreBucket.getScoreValue() == 100000) {
+                shapeRenderer.setColor(Color.ROYAL);
+            }
+            scoreBucket.render(shapeRenderer);
+        }
 
         shapeRenderer.setColor(1, 0.5f, 0.5f, 1);
         ball.render(shapeRenderer);
+        for (Ball ball : pegBalls) {
+            ball.render(shapeRenderer);
+        }
 
         shapeRenderer.setColor(Color.TAN);
         ballLauncher.render(shapeRenderer);

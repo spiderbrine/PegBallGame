@@ -14,7 +14,7 @@ import com.emerson.world.GameWorld;
 
 public class BallLauncher extends GameObject {
 
-    private final float POWER_MULTIPLIER = 150;
+    private final float POWER_MULTIPLIER = 150f;
 
     private float launchPower;
     private Vector2 launchDirection;

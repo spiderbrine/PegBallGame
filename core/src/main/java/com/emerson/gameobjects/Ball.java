@@ -31,8 +31,8 @@ public class Ball extends GameObject{
         FixtureDef ballFixtureDef = new FixtureDef();
         ballFixtureDef.shape = circle;
         ballFixtureDef.density = 0.85f; // mass 0.85 is good
-        ballFixtureDef.friction = 0.2f; // 0.2 is good
-        ballFixtureDef.restitution = 0.78f;  // bounce 0.75 is good
+        ballFixtureDef.friction = 0f; // 0.2 is good
+        ballFixtureDef.restitution = 0.78f;  // bounce 0.78 is good
 
         body.createFixture(ballFixtureDef);
 
@@ -54,6 +54,10 @@ public class Ball extends GameObject{
         float ballY = body.getPosition().y * PPM;
         shapeRenderer.circle(position.x, position.y, width / 2);  // render based on width (radius)
 
+    }
+
+    public void destroy() {
+        world.destroyBody(this.body);
     }
 
     public float getRadius() {

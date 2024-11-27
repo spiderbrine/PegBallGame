@@ -10,15 +10,19 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.emerson.pegballgame.PegBallStart;
 import com.emerson.world.GameWorld;
+import com.emerson.world.Level;
+import com.emerson.world.LevelManager;
 
 public class GameScreen extends ScreenAdapter {
 
     private final PegBallStart GAME;
+    private final LevelManager LEVEL_MANAGER;
 
     public static final float VIRTUAL_WIDTH = 1280;  // Virtual resolution width
     public static final float VIRTUAL_HEIGHT = 720;  // Virtual resolution height
 
     private GameWorld gameWorld;
+    private Level level;
     private ShapeRenderer shapeRenderer;
 
     private Box2DDebugRenderer debugRenderer;
@@ -26,8 +30,9 @@ public class GameScreen extends ScreenAdapter {
     private OrthographicCamera camera;
     private Viewport viewport;
 
-    public GameScreen(PegBallStart game) {
+    public GameScreen(PegBallStart game, LevelManager levelManager, int levelIndex) {
         this.GAME = game;
+        this.LEVEL_MANAGER = GAME.getLevelManager();
         // create camera
         camera = new OrthographicCamera();
 
@@ -39,12 +44,27 @@ public class GameScreen extends ScreenAdapter {
         camera.position.set(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, 0);
         camera.update();
 
-        // create GameWorld and ShapeRenderer to render everything
-        gameWorld = new GameWorld(GAME);
+        LEVEL_MANAGER.setCurrentLevel(levelIndex);
+        loadLevel(LEVEL_MANAGER.getCurrentLevelIndex());
         shapeRenderer = new ShapeRenderer();
 
-        //debugRenderer = new Box2DDebugRenderer();
+        debugRenderer = new Box2DDebugRenderer();
     }
+
+    private void loadLevel(int index) {
+        if (gameWorld != null) {
+            level.getGameWorld().reset();
+            gameWorld = null;
+        }
+        if (level != null) {
+            level.reset();
+        }
+        Level level = LEVEL_MANAGER.getLevel(index);
+        gameWorld = level.getGameWorld();
+        level.setupLevel();
+    }
+
+    // camera methods if needed for ending sequence
 
     @Override
     public void render(float deltaTime) {

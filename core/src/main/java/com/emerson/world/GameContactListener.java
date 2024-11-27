@@ -66,26 +66,43 @@ public class GameContactListener implements ContactListener {
             hitPeg.pegHit();
             pegsHitList.add(hitPeg);
             pegsHit++;
-            if (totalOrangePegsHit < 10) {
-                scoreMultiplier = 1;
-            } else if (totalOrangePegsHit >= 10 && totalOrangePegsHit < 15) {
-                scoreMultiplier = 2;
-            } else if (totalOrangePegsHit >= 15 && totalOrangePegsHit < 19) {
-                scoreMultiplier = 3;
-            } else if (totalOrangePegsHit >= 19 && totalOrangePegsHit < 22) {
-                scoreMultiplier = 5;
-            } else if (totalOrangePegsHit >= 22) {
-                scoreMultiplier = 100;
-            }
+
             if (hitPeg.getPegType() == 1) {
                 // blue peg on hit stuff
-                turnScore = turnScore + (10 * scoreMultiplier);
+                int bluePegPoints = 10 * scoreMultiplier;
+                turnScore = turnScore + bluePegPoints;
+                Label messageLabel = new Label("" + bluePegPoints, skin);
+                messageLabel.setColor(0, 0, 1, 1);
+                messageLabel.setPosition((hitPeg.getPosition().x) - (messageLabel.getWidth() / 2),
+                    (hitPeg.getPosition().y + 10));
+                messageLabel.setFontScale(1f);
+                stage.addActor(messageLabel);
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        messageLabel.remove();
+                    }
+                },1.5f);
             } else if (hitPeg.getPegType() == 2) {
                 // orange peg on hit stuff
-                turnScore = turnScore + (100 * scoreMultiplier);
+                int orangePegPoints = 100 * scoreMultiplier;
+                turnScore = turnScore + orangePegPoints;
                 orangePegsHitList.add(hitPeg);
                 orangePegsHit++;
                 totalOrangePegsHit++;
+                world.removeOrangePegFromList(hitPeg);
+                Label messageLabel = new Label("" + orangePegPoints, skin);
+                messageLabel.setColor(Color.ORANGE);
+                messageLabel.setPosition((hitPeg.getPosition().x) - (messageLabel.getWidth() / 2),
+                    (hitPeg.getPosition().y + 10));
+                messageLabel.setFontScale(1f);
+                stage.addActor(messageLabel);
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        messageLabel.remove();
+                    }
+                },1.5f);
             } else if (hitPeg.getPegType() == 3) {
                 int bonusPoints = (10 * scoreMultiplier) * 50;
                 turnScore = turnScore + bonusPoints;
@@ -100,7 +117,7 @@ public class GameContactListener implements ContactListener {
                     public void run() {
                         messageLabel.remove();
                     }
-                },2f);
+                },1.5f);
             }
             if (turnScore >= 125000 && !freeBall125k) {
                 world.giveFreeBall(new Vector2(hitPeg.getPosition().x, hitPeg.getPosition().y + 10));
@@ -183,5 +200,13 @@ public class GameContactListener implements ContactListener {
 
     public void setTotalScore(int newTotalScore) {
         totalScore = newTotalScore;
+    }
+
+    public int getScoreMultiplier() {
+        return scoreMultiplier;
+    }
+
+    public void setScoreMultiplier(int scoreMultiplier) {
+        this.scoreMultiplier = scoreMultiplier;
     }
 }
