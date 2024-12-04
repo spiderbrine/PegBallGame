@@ -30,7 +30,7 @@ public class GameScreen extends ScreenAdapter {
     private OrthographicCamera camera;
     private Viewport viewport;
 
-    public GameScreen(PegBallStart game, LevelManager levelManager, int levelIndex) {
+    public GameScreen(PegBallStart game, int levelIndex) {
         this.GAME = game;
         this.LEVEL_MANAGER = GAME.getLevelManager();
         // create camera

@@ -26,6 +26,7 @@ import com.emerson.gamescreens.GameScreen;
 import com.emerson.gamescreens.LevelSelectScreen;
 import com.emerson.gamescreens.WinLossMenu;
 import com.emerson.pegballgame.PegBallStart;
+import com.emerson.savedata.SaveData;
 
 import java.util.*;
 
@@ -44,6 +45,7 @@ public class GameWorld {
 
     private World world;
     private GameContactListener gameContactListener;
+    private SaveData saveData;
 
     private Stage stage;
     private final Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
@@ -65,6 +67,7 @@ public class GameWorld {
     private int ballsLeft;
     private Label ballsLeftLabel;
     private Label scoreLabel;
+    private Label highScoreLabel;
     private Label multiplierLabel;
     private Label orangePegsHitLabel;
     private Label orangePegsLeftLabel;
@@ -104,6 +107,7 @@ public class GameWorld {
         pauseButton.setVisible(false);
 
         this.GAME = game;
+        this.saveData = GAME.getGameDataManager().loadGameData();
         this.levelManager = GAME.getLevelManager();
         stage = new Stage(new ScreenViewport());
         pegMap = new HashMap<>();
@@ -482,15 +486,21 @@ public class GameWorld {
 
         scoreLabel = new Label("Score: " + gameContactListener.getTotalScore(), skin);
         scoreLabel.setColor(Color.BLACK);
-        scoreLabel.setPosition(425, Gdx.graphics.getHeight() - 50);
+        scoreLabel.setPosition(425, Gdx.graphics.getHeight() - 20);
         scoreLabel.setFontScale(1.5f);
         stage.addActor(scoreLabel);
 
         multiplierLabel = new Label("Multiplier: " + gameContactListener.getScoreMultiplier() + "x", skin);
-        multiplierLabel.setColor(Color.BLACK);
-        multiplierLabel.setPosition(425, Gdx.graphics.getHeight() - 70);
+        multiplierLabel.setColor(Color.ORANGE);
+        multiplierLabel.setPosition(885, Gdx.graphics.getHeight() - 90);
         multiplierLabel.setFontScale(1.5f);
         stage.addActor(multiplierLabel);
+
+        highScoreLabel = new Label("High Score: " + saveData.highScores.get(levelManager.getCurrentLevel().getLevelName()), skin);
+        highScoreLabel.setColor(Color.BLACK);
+        highScoreLabel.setPosition(700, Gdx.graphics.getHeight() - 20);
+        highScoreLabel.setFontScale(1.3f);
+        stage.addActor(highScoreLabel);
 
         orangePegsHitLabel = new Label("Orange Pegs hit: " + gameContactListener.getTotalOrangePegsHit(), skin);
         orangePegsHitLabel.setColor(Color.ORANGE);
@@ -923,7 +933,7 @@ public class GameWorld {
 
     private void retryLevel() {
         // Logic to restart the current level
-        GAME.setScreen(new GameScreen(GAME, GAME.getLevelManager(), GAME.getLevelManager().getCurrentLevelIndex()));
+        GAME.setScreen(new GameScreen(GAME, GAME.getLevelManager().getCurrentLevelIndex()));
     }
 
     private void goToLevelSelect() {
