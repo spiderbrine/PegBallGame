@@ -18,7 +18,7 @@ public class Ball extends GameObject{
 
         //ballBody.setLinearDamping(0);
         //ballBody.setAngularDamping(0);
-        body.setType(BodyDef.BodyType.StaticBody); // static because the ball can't move until it shoots
+        body.setType(BodyDef.BodyType.KinematicBody); // kinematic because the ball can't move until it shoots but needs to move with launcher
         System.out.println("Ball is static");
         body.setGravityScale(0); // disable gravity
         body.setLinearVelocity(0, 0);  // Keep it from moving

@@ -123,6 +123,27 @@ public class LevelSelectScreen implements Screen {
         });
         stage.addActor(levelButton3);
 
+        TextButton levelButton4 = new TextButton(GAME.getLevelManager().getLevel(3).getLevelName() + "\nHigh Score: "
+            + saveData.highScores.get(GAME.getLevelManager().getLevel(3).getLevelName()), skin);
+        levelButton4.setWidth(buttonWidth);
+        levelButton4.setHeight(buttonHeight);
+
+        if (saveData.levelCompletion.getOrDefault(GAME.getLevelManager().getLevel(3).getLevelName(), false)) {
+            levelButton4.setColor(Color.LIME);
+        } else {
+            levelButton4.setColor(Color.RED);
+        }
+        levelButton4.getLabel().setFontScale(1.7f);
+        levelButton4.setPosition((Gdx.graphics.getWidth() / 2f) - (levelButton4.getWidth() / 2),
+            (Gdx.graphics.getHeight() / 2f) - (levelButton4.getHeight() / 2) + 80);
+        levelButton4.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                GAME.setScreen(new GameScreen(GAME, 3));
+            }
+        });
+        stage.addActor(levelButton4);
+
         TextButton backButton = new TextButton("Back", skin);
         backButton.setWidth(70);
         backButton.setHeight(50);

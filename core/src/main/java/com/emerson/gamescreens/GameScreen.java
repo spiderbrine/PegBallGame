@@ -2,6 +2,7 @@ package com.emerson.gamescreens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -61,7 +62,7 @@ public class GameScreen extends ScreenAdapter {
         }
         Level level = LEVEL_MANAGER.getLevel(index);
         gameWorld = level.getGameWorld();
-        level.setupLevel();
+        level.setupLevel(LEVEL_MANAGER.getCurrentLevelIndex());
     }
 
     // camera methods if needed for ending sequence

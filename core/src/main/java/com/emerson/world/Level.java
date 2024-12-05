@@ -18,16 +18,22 @@ public class Level {
     private int totalPegs;
     private int orangePegs;
 
-    public Level(PegBallStart game, LevelManager levelManager, String levelName, int totalPegs, int orangePegs) {
+    public Level(PegBallStart game, LevelManager levelManager, String levelName, Texture background, int totalPegs, int orangePegs) {
         this.levelName = levelName;
         this.GAME = game;
+        this.background = background;
         this.totalPegs = totalPegs;
         this.orangePegs = orangePegs;
     }
 
-    public void setupLevel() {
+    public void setupLevel(int index) {
+        gameWorld.setBackgroundTexture(background);
         gameWorld.createObstacles();
-        createTestLevel();
+        if (index < 3) {
+            createTestLevel();
+        } else if (index == 3) {
+            gameWorld.loadLevelFromFile("level.json", 7);
+        }
         Timer.schedule(new Timer.Task() {
             @Override
             public void run(){

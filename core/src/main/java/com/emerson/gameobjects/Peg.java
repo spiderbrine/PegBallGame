@@ -35,7 +35,7 @@ public class Peg extends GameObject{
         pegFixtureDef.shape = circle;
         pegFixtureDef.density = 0.5f;  // mass
         pegFixtureDef.friction = 0.2f; // 0.2
-        pegFixtureDef.restitution = 0.70f;  // bounce 0.7
+        pegFixtureDef.restitution = 0.7f;  // bounce 0.7
 
         body.createFixture(pegFixtureDef);
         body.getFixtureList().first().setUserData(pegID); // makes the peg identifiable for collision detection

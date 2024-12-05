@@ -59,7 +59,21 @@ public class TitleScreen implements Screen {
         });
         stage.addActor(playButton);
 
-        // add more buttons (leaderboard)
+        // add more buttons (leaderboard) LOL no leaderboard but heres a level editor
+        TextButton editButton = new TextButton("Edit", skin);
+        editButton.setWidth(150);
+        editButton.setHeight(100);
+        editButton.setColor(Color.ORANGE);
+        editButton.getLabel().setFontScale(3f);
+        editButton.setPosition((Gdx.graphics.getWidth() / 2f) - (editButton.getWidth() / 2),
+            (Gdx.graphics.getHeight() / 3f) - (editButton.getHeight() / 2) - 50);
+        editButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                game.setScreen(new LevelEditorScreen(game));
+            }
+        });
+        stage.addActor(editButton);
     }
 
 

@@ -3,8 +3,11 @@ package com.emerson.world;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -16,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -46,6 +50,9 @@ public class GameWorld {
     private World world;
     private GameContactListener gameContactListener;
     private SaveData saveData;
+
+    private SpriteBatch batch;
+    private Texture backgroundTexture = new Texture("background.png");
 
     private Stage stage;
     private final Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
@@ -110,6 +117,7 @@ public class GameWorld {
         this.saveData = GAME.getGameDataManager().loadGameData();
         this.levelManager = GAME.getLevelManager();
         stage = new Stage(new ScreenViewport());
+        this.batch = new SpriteBatch();
         pegMap = new HashMap<>();
 
         TOTAL_PEGS = totalPegs;
@@ -153,17 +161,17 @@ public class GameWorld {
 
          */
 
-        createBallLauncher(640f - 25f, 670f, 50f, 35f);
+        createBallLauncher(640f - 25f, 670f, 35f, 35f);
         ballLauncher.setLaunchPower(100f); // 100 is good, but tweak maybe when aim line is added
         // randomize ball horizontal aiming for testing
         //ballLauncher.setLaunchDirection((float)(Math.random() * 2) - 1, -1);
         ballLauncher.setBallLauncherLoaded(true);
-        launchPosition.set((ballLauncher.getPosition().x + (ballLauncher.getWidth()/2f)), ballLauncher.getPosition().y - 10);
+        launchPosition.set(ballLauncher.getBallCenter().x, ballLauncher.getBallCenter().y);
         //createBall(665f, 660f, 7f);
         // 10 balls duh
         initializeBallPool(10);
         createLabels();
-        ball = getBall();
+        ball = getNewBall();
         //createFreeBallBucket();
 
         pauseButton.setTouchable(Touchable.enabled);
@@ -225,8 +233,9 @@ public class GameWorld {
         BodyDef bucketDef = new BodyDef();
         bucketDef.position.set(640 - 40, 0);
         Body bucketBody = world.createBody(bucketDef);
-        freeBallBucket = new FreeBallBucket(world, bucketBody, bucketBody.getPosition(), 80, 45, 150);
-        // 150 speed
+        freeBallBucket = new FreeBallBucket(world, bucketBody, bucketBody.getPosition(), 100, 45, 125);
+        // small bucket 80x45 150 speed
+        // bigger bucket 100x45 125 speed
     }
 
     public void createBallLauncher(float startX, float startY, float width, float height) {
@@ -259,18 +268,19 @@ public class GameWorld {
         ballsLeft = initialCount;
     }
 
-    public Ball getBall() {
+    private Ball getNewBall() {
         if (!ballPool.isEmpty()) {
             Ball ball = ballPool.poll();  // get from pool
             ball.getBody().setActive(true);  // reactivate the ball
             ballsLeft--;
             System.out.println("Balls left" + getBallsLeft());
+            ball.setPosition(new Vector2(ballLauncher.getBallCenter().x, ballLauncher.getBallCenter().y));
             return ball;
         } else {
             if (ballPool.size() + 1 <= maxBalls) {
                 // if max balls isnt reached and you need a new one, make a new one
                 System.out.println("New ball created");
-                return createBall(launchPosition.x, launchPosition.y, 7f);
+                return createBall(ballLauncher.getBallCenter().x, ballLauncher.getBallCenter().y, 7f);
             } else {
                 System.out.println("Max balls reached");
                 return null;
@@ -279,13 +289,13 @@ public class GameWorld {
     }
 
     public void prepareNextBall(){
-        ball = getBall();
+        ball = getNewBall();
     }
 
     public void returnBallToPool(Ball ball) {
         ball.getBody().setLinearVelocity(0, 0);  // reset velocity
-        ball.setPosition(launchPosition);  // reset position
-        ball.getBody().setType(BodyDef.BodyType.StaticBody);
+        ball.setPosition(ballLauncher.getBallCenter());  // reset position (i love steve jobs)
+        ball.getBody().setType(BodyDef.BodyType.KinematicBody);
         ball.getBody().setActive(false);  // deactivate ball
         ballPool.offer(ball);  // return to the pool for future reuse
     }
@@ -337,6 +347,51 @@ public class GameWorld {
         }
         relocatePurplePeg();
 
+    }
+
+    public void createLevelFromPositions(List<Vector2> pegPositions, float pegRadius) {
+
+        for (Vector2 pos : pegPositions) {
+            BodyDef pegDef = new BodyDef();
+            pegDef.position.set(pos);
+
+            Body pegBody = world.createBody(pegDef);
+            // create peg and add to list
+            Peg peg = new Peg(this, pegBody, pegBody.getPosition(), pegRadius, pegID++);
+            pegs.add(peg);
+            pegMap.put(peg.getPegID(), peg);
+        }
+        // use RNG to do other peg colors and add them to their own lists and remove them from the original list
+        List<Integer> allPegIDs = new ArrayList<>();
+        for (Peg peg : pegs) {
+            allPegIDs.add(peg.getPegID());
+        }
+        Collections.shuffle(allPegIDs);
+
+        List<Integer> orangePegs = new ArrayList<>(allPegIDs.subList(0, NUM_ORANGE_PEGS));
+        for (Peg peg : pegs) {
+            for (int i = 0; i < orangePegs.size(); i++) {
+                if (peg.getPegID() == orangePegs.get(i)) {
+                    peg.setPegType(2);
+                    orangePegsList.add(peg);
+                }
+            }
+        }
+        relocatePurplePeg();
+
+    }
+
+    public void loadLevelFromFile(String fileName, float pegRadius) {
+        FileHandle file = Gdx.files.local(fileName);
+        if (!file.exists()) {
+            System.out.println("Level file not found: " + fileName);
+            return;
+        }
+
+        Json json = new Json();
+        List<Vector2> pegPositions = json.fromJson(ArrayList.class, Vector2.class, file.readString());
+
+        createLevelFromPositions(pegPositions, pegRadius);
     }
 
 
@@ -465,7 +520,7 @@ public class GameWorld {
                             frenzyScoreLabel.remove();
                             showWinLossMessage();
                         }
-                    },5f);
+                    },3f);
                 } else {
                     prepareNextBall();
                     ballLauncher.setBallLauncherLoaded(true);
@@ -813,10 +868,14 @@ public class GameWorld {
         if (ballLauncher.getBallLauncherLoaded() && (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT))) {
             Vector2 cursorPosition = stage.screenToStageCoordinates(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
 
-            // check if cursor is over pause
+            // check if cursor is over pause or launcher
             if (cursorPosition.x >= pauseButton.getX() && cursorPosition.x <= pauseButton.getX() + pauseButton.getWidth() &&
                 cursorPosition.y >= pauseButton.getY() && cursorPosition.y <= pauseButton.getY() + pauseButton.getHeight()) {
                 System.out.println("Mouse is over the pause button.");
+                return; // dont fucking shoot
+            } else if (cursorPosition.x >= ballLauncher.getPosition().x && cursorPosition.x <= ballLauncher.getPosition().x + ballLauncher.getWidth() &&
+                cursorPosition.y >= ballLauncher.getPosition().y && cursorPosition.y <= ballLauncher.getPosition().y + ballLauncher.getHeight()) {
+                System.out.println("Mouse is over the ball launcher");
                 return; // dont fucking shoot
             }
             ballLauncher.shootBall(ball); // shoot if space or lmb is pressed
@@ -992,11 +1051,26 @@ public class GameWorld {
         orangePegsList.remove(peg);
     }
 
+    public Ball getBall() {
+        return ball;
+    }
+
+    public BallLauncher getBallLauncher() {
+        return ballLauncher;
+    }
+
     public int getBallsLeft() {
         return ballsLeft;
     }
 
     public void renderObjects(ShapeRenderer shapeRenderer) {
+
+        if (!(backgroundTexture == null)) {
+            batch.setProjectionMatrix(camera.combined);
+            batch.begin();
+            batch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+            batch.end();
+        }
 
         shapeRenderer.setColor(Color.BLACK);
         leftWall.render(shapeRenderer);
@@ -1077,9 +1151,12 @@ public class GameWorld {
             ball.render(shapeRenderer);
         }
 
-        shapeRenderer.setColor(Color.TAN);
         ballLauncher.render(shapeRenderer);
 
+    }
+
+    public void setBackgroundTexture(Texture backgroundTexture) {
+        this.backgroundTexture = backgroundTexture;
     }
 
     public void renderStage(float delta) {

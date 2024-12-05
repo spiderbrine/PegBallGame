@@ -1,5 +1,6 @@
 package com.emerson.world;
 
+import com.badlogic.gdx.graphics.Texture;
 import com.emerson.pegballgame.PegBallStart;
 
 import java.util.ArrayList;
@@ -19,9 +20,10 @@ public class LevelManager {
     }
 
     private void loadLevels() {
-        levels.add(new Level(GAME, this, "Test 100/1", 100, 1));
-        levels.add(new Level(GAME, this, "Test 100/25", 100, 25));
-        levels.add(new Level(GAME, this, "Test 10/1", 10, 1));
+        levels.add(new Level(GAME, this, "Test 100/1", null, 100, 1));
+        levels.add(new Level(GAME, this, "Test 100/25", null, 100, 25));
+        levels.add(new Level(GAME, this, "Test 10/1", null, 10, 1));
+        levels.add(new Level(GAME, this, "File Load", new Texture("background.png"), 100, 3));
     }
 
     public Level getCurrentLevel() {
