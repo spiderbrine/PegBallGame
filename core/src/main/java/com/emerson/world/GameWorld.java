@@ -79,6 +79,10 @@ public class GameWorld {
     private Label orangePegsHitLabel;
     private Label orangePegsLeftLabel;
 
+    private float elapsedTime = 0;
+    private Label timerLabel;
+    private boolean isTimerRunning = true;
+
     private Ball ball;
     private List<Peg> pegs = new ArrayList<>();
     private List<Peg> orangePegsList = new ArrayList<>();
@@ -104,6 +108,8 @@ public class GameWorld {
     private BallLauncher ballLauncher;
     private Vector2 launchPosition = new Vector2(615, 660);
     private int shotsTaken = 0;
+
+    private final Queue<Runnable> physicsChangesQueue = new LinkedList<>();
 
     private boolean isZooming = false;
     private OrthographicCamera camera;
@@ -174,6 +180,7 @@ public class GameWorld {
         ball = getNewBall();
         //createFreeBallBucket();
 
+        timerLabel = new Label("Time: 00:00", skin);
         pauseButton.setTouchable(Touchable.enabled);
         pauseButton.setWidth(200);
         pauseButton.setHeight(150);
@@ -231,7 +238,7 @@ public class GameWorld {
 
     public void createFreeBallBucket() {
         BodyDef bucketDef = new BodyDef();
-        bucketDef.position.set(640 - 40, 0);
+        bucketDef.position.set(640 - 50, 0); // minus width of bucket
         Body bucketBody = world.createBody(bucketDef);
         freeBallBucket = new FreeBallBucket(world, bucketBody, bucketBody.getPosition(), 100, 45, 125);
         // small bucket 80x45 150 speed
@@ -337,11 +344,23 @@ public class GameWorld {
         Collections.shuffle(allPegIDs);
 
         List<Integer> orangePegs = new ArrayList<>(allPegIDs.subList(0, NUM_ORANGE_PEGS));
+        List<Integer> greenPegs = new ArrayList<>(allPegIDs.subList(NUM_ORANGE_PEGS+1, NUM_ORANGE_PEGS+3));
+        List<Integer> redPegs = new ArrayList<>(allPegIDs.subList(NUM_ORANGE_PEGS+4, NUM_ORANGE_PEGS+6));
         for (Peg peg : pegs) {
             for (int i = 0; i < orangePegs.size(); i++) {
                 if (peg.getPegID() == orangePegs.get(i)) {
                     peg.setPegType(2);
                     orangePegsList.add(peg);
+                }
+            }
+            for (int i = 0; i < greenPegs.size(); i++) {
+                if (peg.getPegID() == greenPegs.get(i)) {
+                    peg.setPegType(4);
+                }
+            }
+            for (int i = 0; i < redPegs.size(); i++) {
+                if (peg.getPegID() == redPegs.get(i)) {
+                    peg.setPegType(5);
                 }
             }
         }
@@ -369,11 +388,23 @@ public class GameWorld {
         Collections.shuffle(allPegIDs);
 
         List<Integer> orangePegs = new ArrayList<>(allPegIDs.subList(0, NUM_ORANGE_PEGS));
+        List<Integer> greenPegs = new ArrayList<>(allPegIDs.subList(NUM_ORANGE_PEGS+1, NUM_ORANGE_PEGS+3));
+        List<Integer> redPegs = new ArrayList<>(allPegIDs.subList(NUM_ORANGE_PEGS+4, NUM_ORANGE_PEGS+6));
         for (Peg peg : pegs) {
             for (int i = 0; i < orangePegs.size(); i++) {
                 if (peg.getPegID() == orangePegs.get(i)) {
                     peg.setPegType(2);
                     orangePegsList.add(peg);
+                }
+            }
+            for (int i = 0; i < greenPegs.size(); i++) {
+                if (peg.getPegID() == greenPegs.get(i)) {
+                    peg.setPegType(4);
+                }
+            }
+            for (int i = 0; i < redPegs.size(); i++) {
+                if (peg.getPegID() == redPegs.get(i)) {
+                    peg.setPegType(5);
                 }
             }
         }
@@ -390,6 +421,27 @@ public class GameWorld {
 
         Json json = new Json();
         List<Vector2> pegPositions = json.fromJson(ArrayList.class, Vector2.class, file.readString());
+
+        createLevelFromPositions(pegPositions, pegRadius);
+    }
+
+    public void loadMirrorLevelFromFile(String fileName, float pegRadius) {
+        FileHandle file = Gdx.files.local(fileName);
+        if (!file.exists()) {
+            System.out.println("Level file not found: " + fileName);
+            return;
+        }
+
+        Json json = new Json();
+        List<Vector2> leftPegPositions = json.fromJson(ArrayList.class, Vector2.class, file.readString());
+        List<Vector2> pegPositions = json.fromJson(ArrayList.class, Vector2.class, file.readString());
+
+        // make mirror pegs
+        float centerX = Gdx.graphics.getWidth() / 2f;
+        for (Vector2 pos : leftPegPositions) {
+            float mirroredX = centerX + (centerX - pos.x); // reflect X
+            pegPositions.add(new Vector2(mirroredX, pos.y));
+        }
 
         createLevelFromPositions(pegPositions, pegRadius);
     }
@@ -415,6 +467,11 @@ public class GameWorld {
                 pegMap.put(brickPeg.getPegID(), brickPeg);
             }
         }
+    }
+
+
+    public void activatePowerUp(PowerUp powerUp, Ball ball) {
+        powerUp.activate(ball, this);
     }
 
     public void addPegToDisappearQueue(Peg peg) {
@@ -464,6 +521,39 @@ public class GameWorld {
     }
 
     private void showBallOutOfBoundsMessage() {
+        if (gameContactListener.whirlyBallPowerUp.active()) {
+            gameContactListener.whirlyBallPowerUp.deactivate(ball, GameWorld.this);
+        }
+        if (gameContactListener.bouncyBallPowerUp.active()) {
+            gameContactListener.bouncyBallPowerUp.deactivate(ball, GameWorld.this);
+        }
+        if (gameContactListener.electroBallPowerUp.active()) {
+            gameContactListener.incrementElectroTurns();
+            if ((gameContactListener.getElectroTurns() > gameContactListener.electroBallPowerUp.getMaxTurns())) {
+                gameContactListener.electroBallPowerUp.deactivate(ball, GameWorld.this);
+                gameContactListener.resetElectroTurns();
+            }
+        }
+        if (gameContactListener.sludgeBallPowerUp.active()) {
+            gameContactListener.incrementSludgeTurns();
+            if ((gameContactListener.getSludgeTurns() > gameContactListener.sludgeBallPowerUp.getMaxTurns())) {
+                gameContactListener.sludgeBallPowerUp.deactivate(ball, GameWorld.this);
+                gameContactListener.resetSludgeTurns();
+            }
+            gameContactListener.sludgeBallPowerUp.deactivate(ball, GameWorld.this);
+        }
+        if (gameContactListener.mirrorBallPowerUp.active()) {
+            gameContactListener.incrementMirrorTurns();
+            if ((gameContactListener.getMirrorTurns() > gameContactListener.mirrorBallPowerUp.getMaxTurns())) {
+                gameContactListener.mirrorBallPowerUp.deactivate(ball,  GameWorld.this);
+                gameContactListener.resetMirrorTurns();
+            }
+        }
+        if (gameContactListener.osmiumBallPowerUp.active()) {
+            gameContactListener.osmiumBallPowerUp.deactivate(ball, GameWorld.this);
+        }
+
+
         Label messageLabel = new Label("PEGS HIT: " + gameContactListener.getPegsHit(), skin);
         messageLabel.setColor(Color.BLACK);
         messageLabel.setPosition((viewport.getWorldWidth() / 2) - (messageLabel.getWidth()),
@@ -737,8 +827,9 @@ public class GameWorld {
     }
 
     public void showWinLossMessage() {
+        isTimerRunning = false;
         WinLossMenu menu = new WinLossMenu(GAME, GAME.getLevelManager(), checkOrangePegs(), characterSelectMenu.getCharacter(), gameContactListener.getTotalScore(),
-            shotsTaken, skin);
+            shotsTaken, elapsedTime, skin);
         stage.addActor(menu);
         /*
         Label winMessage = new Label("YOU WIN!!!", skin);
@@ -756,6 +847,16 @@ public class GameWorld {
         stage.addActor(scoreWinLabel);
 
          */
+    }
+
+    public void queuePhysicsChange(Runnable change) {
+        physicsChangesQueue.add(change);
+    }
+
+    public void applyQueuedChanges() {
+        while (!physicsChangesQueue.isEmpty()) {
+            physicsChangesQueue.poll().run();
+        }
     }
 
     private float timeScale = 1f;
@@ -778,12 +879,29 @@ public class GameWorld {
         int positionIterations = 2;  //
 
         world.step(timeStep * timeScale, velocityIterations, positionIterations);
+        applyQueuedChanges();
+        if (isTimerRunning) {
+            elapsedTime += Gdx.graphics.getDeltaTime(); // Increment by frame time
+        }
+
+        int minutes = (int) (elapsedTime / 60);
+        int seconds = (int) (elapsedTime % 60);
+        timerLabel.setText(String.format("Time: %02d:%02d", minutes, seconds));
 
         if (!endCalled) {
             freeBallBucket.update(deltaTime);
         }
         ballLauncher.update(deltaTime);
         ball.update(deltaTime);
+        if (gameContactListener.whirlyBallPowerUp.active()) {
+            gameContactListener.whirlyBallPowerUp.update(deltaTime, ball, this);
+        } else if (gameContactListener.bouncyBallPowerUp.active()) {
+            gameContactListener.bouncyBallPowerUp.update(deltaTime, ball, this);
+        } else if (gameContactListener.electroBallPowerUp.active()) {
+            gameContactListener.electroBallPowerUp.update(deltaTime, ball, this);
+        } else if (gameContactListener.sludgeBallPowerUp.active()) {
+            gameContactListener.sludgeBallPowerUp.update(deltaTime, ball, this);
+        }
 
         if (endCalled) {
             for (Ball pegBall : pegBalls) {
@@ -925,10 +1043,12 @@ public class GameWorld {
     public void togglePause() {
         if (isPaused) { // if the game is paused
             isPaused = false; // resume it
+            isTimerRunning = true;
             pauseButton.setVisible(true); // put the pause button back
         }
         else { // if game is running
             isPaused = true; // pause game
+            isTimerRunning = false;
             pauseButton.setVisible(false); // take away pause button
         }
 
@@ -969,6 +1089,7 @@ public class GameWorld {
             }
         });
 
+        pauseMenu.add(timerLabel).row();
         pauseMenu.add(resumeButton).row();
         pauseMenu.add(quitToLevelSelectButton);
         pauseMenu.setSize(400, 400);
@@ -984,10 +1105,16 @@ public class GameWorld {
         Gdx.input.setInputProcessor(null);
         timeScale = 1f;
         isPaused = false;
+        resetTimer();
         characterSelected = false;
         characterSelectMenu.reset();
 
         Gdx.input.setInputProcessor(null);
+    }
+
+    public void resetTimer() {
+        elapsedTime = 0;
+        timerLabel.setText("Time: 00:00");
     }
 
     private void retryLevel() {
@@ -1063,6 +1190,20 @@ public class GameWorld {
         return ballsLeft;
     }
 
+    public PegBallStart getGAME() {
+        return GAME;
+    }
+
+    public void hitPeg(Peg peg) {
+        System.out.println("Collision detected!");
+        int pegID = peg.getPegID();
+        System.out.println(pegID);
+        if (pegMap.containsKey(pegID)){
+            Peg hitPeg = pegMap.get(pegID);
+            gameContactListener.handlePegHit(pegID, hitPeg);
+        }
+    }
+
     public void renderObjects(ShapeRenderer shapeRenderer) {
 
         if (!(backgroundTexture == null)) {
@@ -1080,18 +1221,30 @@ public class GameWorld {
         for (Peg peg : pegs) {
             if(peg.isHit()) {
                 // can also check type here to handle other colors
-                if (peg.getPegType() == 3) {
+                if (peg.getPegType() == 5) {
+                    shapeRenderer.setColor(Color.BROWN);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 4) {
+                    shapeRenderer.setColor(Color.GREEN);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 3) {
                     shapeRenderer.setColor(Color.PINK);
                     peg.render(shapeRenderer);
                 } else if (peg.getPegType() == 2) {
-                    shapeRenderer.setColor(Color.SCARLET);
+                    shapeRenderer.setColor(1f, 0.35f, 0f, 1f);
                     peg.render(shapeRenderer);
                 } else if (peg.getPegType() == 1) {
                     shapeRenderer.setColor(Color.CYAN);
                     peg.render(shapeRenderer);
                 }
             } else {
-                if (peg.getPegType() == 3) {
+                if (peg.getPegType() == 5) {
+                    shapeRenderer.setColor(Color.RED);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 4) {
+                    shapeRenderer.setColor(Color.LIME);
+                    peg.render(shapeRenderer);
+                } else if (peg.getPegType() == 3) {
                     shapeRenderer.setColor(Color.MAGENTA);
                     peg.render(shapeRenderer);
                 } else if (peg.getPegType() == 2) {
@@ -1145,7 +1298,20 @@ public class GameWorld {
             scoreBucket.render(shapeRenderer);
         }
 
-        shapeRenderer.setColor(1, 0.5f, 0.5f, 1);
+        gameContactListener.whirlyBallPowerUp.render(shapeRenderer);
+        gameContactListener.bouncyBallPowerUp.render(shapeRenderer);
+        gameContactListener.electroBallPowerUp.render(shapeRenderer);
+        gameContactListener.sludgeBallPowerUp.render(shapeRenderer);
+
+        if (gameContactListener.sludgeBallPowerUp.active()) {
+            shapeRenderer.setColor(Color.FOREST);
+        } else if (gameContactListener.mirrorBallPowerUp.active()) {
+            shapeRenderer.setColor(0.5f, 0.5f, 1f, 1f);
+        } else if (gameContactListener.osmiumBallPowerUp.active()) {
+            shapeRenderer.setColor(Color.LIGHT_GRAY);
+        } else {
+            shapeRenderer.setColor(1, 0.5f, 0.5f, 1);
+        }
         ball.render(shapeRenderer);
         for (Ball ball : pegBalls) {
             ball.render(shapeRenderer);

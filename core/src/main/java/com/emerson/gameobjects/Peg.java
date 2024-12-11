@@ -17,6 +17,7 @@ public class Peg extends GameObject{
     private int pegType;
     private int pegID;
     private boolean isHit = false;
+    private boolean decayed = false;
 
     public Peg(GameWorld gameWorld, Body body, Vector2 position, float radius, int pegID) {
         super(body, position, radius * 2, radius * 2);
@@ -89,8 +90,19 @@ public class Peg extends GameObject{
         //*** I don't know exactly what's going on here and why it works but we peg
         //float pegX = body.getPosition().x * PPM;
         //float pegY = body.getPosition().y * PPM;
+        if (decayed) {
+            shapeRenderer.setColor(0f, 1f, 0.5f, 1f);
+        }
         shapeRenderer.circle(position.x, position.y, width / 2);  // render based on width (radius)
 
+    }
+
+    public boolean isDecayed() {
+        return decayed;
+    }
+
+    public void setDecayed(boolean decayed) {
+        this.decayed = decayed;
     }
 
     public float getRadius() {

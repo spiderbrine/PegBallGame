@@ -108,20 +108,23 @@ public class CharacterSelectMenu {
         // update info window based on character the cursor is hovered over
         if (characterName.equals("Whirly-Ball")) {
             characterImage.setDrawable(new TextureRegionDrawable(new TextureRegion(new Texture("whirlyBall.png"))));
-            characterDescription.setText("When activated: Next turn, the ball shoots through pegs in a swirly wind pattern.");
+            characterDescription.setText("When activated: A tornado forms around the ball and any pegs caught inside are hit. " +
+                "Can be upgraded if another green peg is hit while Whirly-Ball is active.");
         } else if (characterName.equals("Bouncy-Ball")) {
             characterImage.setDrawable(new TextureRegionDrawable(new TextureRegion(new Texture("bouncyBall.png"))));
-            characterDescription.setText("When activated: For the rest of the current turn and next turn, " +
-                "the ball becomes bouncier and places a bouncy floor over the bottom of the screen. " +
-                "The ball can bounce off of the floor 1 time and then the floor opens back up to normal.");
+            characterDescription.setText("When activated: The ball becomes bouncier and a bouncy floor covers the bottom of the screen. " +
+                "The ball can bounce off of the floor 3 times, then it disappears. " +
+                "Can be upgraded if another green peg is hit while Bouncy-Ball is active.");
         } else if (characterName.equals("Electro-Ball")) {
             characterImage.setDrawable(new TextureRegionDrawable(new TextureRegion(new Texture("electroBall.png"))));
             characterDescription.setText("When activated: For the rest of the current turn and next turn, " +
-                "the ball becomes electric and each peg hit will arc electricity to 2 nearby pegs.");
+                "the ball becomes electric and each peg hit will arc electricity to 2 nearby pegs. " +
+                "Can be upgraded if another green peg is hit while Electro-Ball is active.");
         } else if (characterName.equals("Sludge-Ball")) {
             characterImage.setDrawable(new TextureRegionDrawable(new TextureRegion(new Texture("sludgeBall.png"))));
             characterDescription.setText("When activated: For the rest of the current turn and next turn, " +
-                "the ball becomes covered in corrosive sludge. Each peg hit will decay and drip sludge to the pegs below.");
+                "the ball becomes covered in corrosive sludge. Each peg hit will decay and drip sludge to the pegs below. " +
+                "Can be upgraded if another green peg is hit while Sludge-Ball is active.");
         }
     }
 

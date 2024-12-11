@@ -47,6 +47,7 @@ public class LevelEditorScreen implements Screen {
     private Table table;
     private OrthographicCamera camera;
     private Viewport viewport;
+    private ShapeRenderer shapeRenderer;
 
     public LevelEditorScreen(PegBallStart game) {
         this.GAME = game;
@@ -57,6 +58,7 @@ public class LevelEditorScreen implements Screen {
 
         skin = new Skin(Gdx.files.internal("uiskin.json"));
         this.batch = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
 
         camera = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
@@ -148,7 +150,12 @@ public class LevelEditorScreen implements Screen {
             addPeg(cursorPosition.x, cursorPosition.y);
         }
         stage.draw();
-        //stage.setDebugAll(true); // Displays debug outlines of stage actors
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(Color.BLACK);
+        shapeRenderer.rect(400, 0, 480, 45);
+        shapeRenderer.end();
+        //stage.setDebugAll(true);
     }
 
     private boolean checkClick() {

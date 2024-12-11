@@ -17,13 +17,15 @@ public class Level {
     private GameWorld gameWorld;
     private int totalPegs;
     private int orangePegs;
+    private boolean mirror;
 
-    public Level(PegBallStart game, LevelManager levelManager, String levelName, Texture background, int totalPegs, int orangePegs) {
+    public Level(PegBallStart game, LevelManager levelManager, String levelName, Texture background, int totalPegs, int orangePegs, boolean mirror) {
         this.levelName = levelName;
         this.GAME = game;
         this.background = background;
         this.totalPegs = totalPegs;
         this.orangePegs = orangePegs;
+        this.mirror = mirror;
     }
 
     public void setupLevel(int index) {
@@ -32,6 +34,10 @@ public class Level {
         if (index < 3) {
             createTestLevel();
         } else if (index == 3) {
+            gameWorld.loadLevelFromFile(levelName+".json", 7);
+        } else if (index == 4) {
+            gameWorld.loadMirrorLevelFromFile(levelName+".json", 7 );
+        } else {
             gameWorld.loadLevelFromFile("level.json", 7);
         }
         Timer.schedule(new Timer.Task() {
@@ -63,5 +69,9 @@ public class Level {
 
     public String getLevelName() {
         return levelName;
+    }
+
+    public boolean isMirror() {
+        return mirror;
     }
 }

@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Timer;
@@ -34,6 +35,16 @@ public class GameContactListener implements ContactListener {
     private boolean freeBall25k = false;
     private boolean freeBall75k = false;
     private boolean freeBall125k = false;
+    public WhirlyBallPowerUp whirlyBallPowerUp = new WhirlyBallPowerUp();
+    public BouncyBallPowerUp bouncyBallPowerUp = new BouncyBallPowerUp();
+    public ElectroBallPowerUp electroBallPowerUp = new ElectroBallPowerUp();
+    public SludgeBallPowerUp sludgeBallPowerUp = new SludgeBallPowerUp();
+    public MirrorBallPowerUp mirrorBallPowerUp = new MirrorBallPowerUp();
+    public OsmiumBallPowerUp osmiumBallPowerUp = new OsmiumBallPowerUp();
+    private int floorHits = 0;
+    private int electroTurns = 0;
+    private int sludgeTurns = 0;
+    private int mirrorTurns = 0;
 
     public GameContactListener(Map<Integer, Peg> pegMap, List<Peg> pegs, GameWorld world, Stage stage) {
         this.pegMap = pegMap;
@@ -45,8 +56,23 @@ public class GameContactListener implements ContactListener {
     @Override
     public void beginContact(Contact contact) {
         // Called when two fixtures begin to touch
-        int stuck = 0;
         System.out.println("Collision detected!");
+        Fixture fixtureA = contact.getFixtureA();
+        Fixture fixtureB = contact.getFixtureB();
+
+        System.out.println("Collision detected between: "
+            + fixtureA.getUserData() + " and " + fixtureB.getUserData());
+
+        boolean isBall = (fixtureA.getUserData() != null && fixtureA.getUserData().equals("ball")) ||
+            (fixtureB.getUserData() != null && fixtureB.getUserData().equals("ball"));
+
+        boolean isFloor = (fixtureA.getUserData() != null && fixtureA.getUserData().equals("floor")) ||
+            (fixtureB.getUserData() != null && fixtureB.getUserData().equals("floor"));
+
+        if (isBall && isFloor) {
+            System.out.println("Ball hit the floor!");
+            handleFloorHit();
+        }
         int pegID = getPegIDFromContact(contact);
         System.out.println(pegID);
         if (pegMap.containsKey(pegID)){
@@ -60,13 +86,25 @@ public class GameContactListener implements ContactListener {
         */
     }
 
-    private void handlePegHit(int pegID, Peg hitPeg) {
+    private void handleFloorHit() {
+        floorHits++;
+        System.out.println("Floor hit" + floorHits);
+        if ((bouncyBallPowerUp.getFloor() != null) && floorHits >= bouncyBallPowerUp.getMaxFloorHits()) {
+            world.queuePhysicsChange(() -> {
+                world.getWorld().destroyBody(bouncyBallPowerUp.getFloor());
+                bouncyBallPowerUp.setFloor(null);
+                System.out.println("Floor destroyed!");
+            });
+            floorHits = 0;
+        }
+    }
+
+    public void handlePegHit(int pegID, Peg hitPeg) {
         if (!hitPeg.isHit()) {
             System.out.println("Peg " + pegID + " has been hit!");
             hitPeg.pegHit();
             pegsHitList.add(hitPeg);
             pegsHit++;
-
             if (hitPeg.getPegType() == 1) {
                 // blue peg on hit stuff
                 int bluePegPoints = 10 * scoreMultiplier;
@@ -104,10 +142,68 @@ public class GameContactListener implements ContactListener {
                     }
                 },1.5f);
             } else if (hitPeg.getPegType() == 3) {
+                // purple peg
                 int bonusPoints = (10 * scoreMultiplier) * 50;
                 turnScore = turnScore + bonusPoints;
                 Label messageLabel = new Label("BONUS POINTS! " + bonusPoints, skin);
                 messageLabel.setColor(Color.PURPLE);
+                messageLabel.setPosition((hitPeg.getPosition().x) - (messageLabel.getWidth() / 2),
+                    (hitPeg.getPosition().y + 10));
+                messageLabel.setFontScale(1f);
+                stage.addActor(messageLabel);
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        messageLabel.remove();
+                    }
+                },1.5f);
+            } else if (hitPeg.getPegType() == 4) {
+                // green peg
+                // if level is mirror, activate mirror ball
+                // if not check character and activate corresponding power
+                if (world.getGAME().getLevelManager().getCurrentLevel().isMirror()) {
+                    world.activatePowerUp(mirrorBallPowerUp, world.getBall());
+                    mirrorTurns++;
+                } else {
+                    if (world.characterSelectMenu.getCharacter().equals("Whirly-Ball")) {
+                        world.activatePowerUp(whirlyBallPowerUp, world.getBall());
+                    } else if (world.characterSelectMenu.getCharacter().equals("Bouncy-Ball")) {
+                        world.activatePowerUp(bouncyBallPowerUp, world.getBall());
+                    } else if (world.characterSelectMenu.getCharacter().equals("Electro-Ball")) {
+                        world.activatePowerUp(electroBallPowerUp, world.getBall());
+                        electroTurns++;
+                    } else if (world.characterSelectMenu.getCharacter().equals("Sludge-Ball")) {
+                        world.activatePowerUp(sludgeBallPowerUp, world.getBall());
+                        sludgeTurns++;
+                    }
+                }
+
+                String labelText;
+                if (mirrorBallPowerUp.active()) {
+                    labelText = "Mirror-Ball!";
+                } else {
+                    labelText = world.characterSelectMenu.getCharacter() + "!";
+                }
+
+                Label messageLabel = new Label(labelText, skin);
+                messageLabel.setColor(Color.LIME);
+                messageLabel.setPosition((hitPeg.getPosition().x) - (messageLabel.getWidth() / 2),
+                    (hitPeg.getPosition().y + 10));
+                messageLabel.setFontScale(1f);
+                stage.addActor(messageLabel);
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        messageLabel.remove();
+                    }
+                },1.5f);
+
+            } else if (hitPeg.getPegType() == 5) {
+                // red peg
+                world.activatePowerUp(osmiumBallPowerUp, world.getBall());
+
+                Label messageLabel = new Label("OSMIUM BALL!", skin);
+                messageLabel.setColor(Color.RED);
                 messageLabel.setPosition((hitPeg.getPosition().x) - (messageLabel.getWidth() / 2),
                     (hitPeg.getPosition().y + 10));
                 messageLabel.setFontScale(1f);
@@ -129,6 +225,15 @@ public class GameContactListener implements ContactListener {
                 world.giveFreeBall(new Vector2(hitPeg.getPosition().x, hitPeg.getPosition().y + 10));
                 freeBall25k = true;
             }
+            if (electroBallPowerUp.active()) {
+                electroBallPowerUp.activateNearbyPegs(hitPeg);
+            }
+            if (sludgeBallPowerUp.active()) {
+                sludgeBallPowerUp.handlePegHit(hitPeg);
+            }
+            if (mirrorBallPowerUp.active()) {
+                mirrorBallPowerUp.hitMirrorPeg(hitPeg);
+            }
         }
     }
 
@@ -141,6 +246,8 @@ public class GameContactListener implements ContactListener {
         } else if (userDataB instanceof Integer) {
             return (int) userDataB;
         }
+
+
 
         return -1;  // no peg ID found
     }
@@ -208,5 +315,41 @@ public class GameContactListener implements ContactListener {
 
     public void setScoreMultiplier(int scoreMultiplier) {
         this.scoreMultiplier = scoreMultiplier;
+    }
+
+    public int getElectroTurns() {
+        return electroTurns;
+    }
+
+    public void incrementElectroTurns() {
+        electroTurns++;
+    }
+
+    public void resetElectroTurns() {
+        electroTurns = 0;
+    }
+
+    public int getSludgeTurns() {
+        return sludgeTurns;
+    }
+
+    public void incrementSludgeTurns() {
+        sludgeTurns++;
+    }
+
+    public void resetSludgeTurns() {
+        sludgeTurns = 0;
+    }
+
+    public int getMirrorTurns() {
+        return mirrorTurns;
+    }
+
+    public void incrementMirrorTurns() {
+        mirrorTurns++;
+    }
+
+    public void resetMirrorTurns() {
+        mirrorTurns = 0;
     }
 }

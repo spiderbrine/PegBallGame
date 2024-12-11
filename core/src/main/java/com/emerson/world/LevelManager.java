@@ -20,10 +20,12 @@ public class LevelManager {
     }
 
     private void loadLevels() {
-        levels.add(new Level(GAME, this, "Test 100/1", null, 100, 1));
-        levels.add(new Level(GAME, this, "Test 100/25", null, 100, 25));
-        levels.add(new Level(GAME, this, "Test 10/1", null, 10, 1));
-        levels.add(new Level(GAME, this, "File Load", new Texture("background.png"), 100, 3));
+        levels.add(new Level(GAME, this, "Test 100/1", null, 100, 1, false));
+        levels.add(new Level(GAME, this, "Test 100/25", null, 100, 25, false));
+        levels.add(new Level(GAME, this, "Test 10/1", null, 10, 1, false));
+        levels.add(new Level(GAME, this, "Alien", new Texture("Alien.png"), 77, 25, false));
+        levels.add(new Level(GAME, this, "Mushroom", new Texture("Mushroom.png"), 100, 25, true));
+        levels.add(new Level(GAME, this, "Custom", new Texture("Alien.png"), 100, 1, false));
     }
 
     public Level getCurrentLevel() {

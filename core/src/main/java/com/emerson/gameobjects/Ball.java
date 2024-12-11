@@ -1,14 +1,20 @@
 package com.emerson.gameobjects;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 
 public class Ball extends GameObject{
 
+    private final float STUCK_THRESHOLD = 4f;
+    private final float MAX_STUCK_TIME = 2.5f;
+    private final Vector2 JOLT_IMPULSE = new Vector2(MathUtils.random(-500000000,500000000), 5000000f);
+
     private World world;
     private Body body;
     private float radius;
+    private float stuckTime = 0;
 
     public Ball(World world, Body body, Vector2 position, float radius) {
         super(body, position, radius * 2, radius * 2);  // width and height are based on diameter
@@ -34,7 +40,9 @@ public class Ball extends GameObject{
         ballFixtureDef.friction = 0f; // 0.2 is good
         ballFixtureDef.restitution = 0.78f;  // bounce 0.78 is good
 
-        body.createFixture(ballFixtureDef);
+        Fixture ballFixture = body.createFixture(ballFixtureDef);
+        ballFixture.setUserData("ball");
+        System.out.println("Ball fixture userData set to 'ball'");
 
         circle.dispose();
     }
@@ -43,6 +51,22 @@ public class Ball extends GameObject{
     public void update(float deltaTime) {
         // sync position with body position
         position = body.getPosition();
+
+        Vector2 velocity = body.getLinearVelocity();
+        //System.out.println(velocity);
+        // check stuck
+        if (velocity.len() < STUCK_THRESHOLD) {
+            stuckTime += deltaTime;
+            if (stuckTime >= MAX_STUCK_TIME) {
+                // apply jolt
+                body.applyLinearImpulse(JOLT_IMPULSE, body.getWorldCenter(), true);
+                stuckTime = 0;
+                System.out.println("Ball was stuck. Applied jolt!");
+            }
+        } else {
+            // ball is moving, reset stuck timer
+            stuckTime = 0;
+        }
     }
 
     public static final float PPM = 100;  // this is ass 6 hours of my life spent on this***

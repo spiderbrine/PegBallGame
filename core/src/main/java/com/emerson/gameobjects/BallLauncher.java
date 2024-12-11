@@ -59,6 +59,7 @@ public class BallLauncher extends GameObject {
 
         FixtureDef ballLauncherFixtureDef = new FixtureDef();
         ballLauncherFixtureDef.shape = rectangle;
+        ballLauncherFixtureDef.restitution = 3f;
         body.createFixture(ballLauncherFixtureDef);
 
         rectangle.dispose();

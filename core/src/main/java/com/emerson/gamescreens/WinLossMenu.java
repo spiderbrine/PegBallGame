@@ -16,7 +16,7 @@ public class WinLossMenu extends Window {
     private final Skin SKIN;
     private boolean highScore = false;
 
-    public WinLossMenu(PegBallStart game, LevelManager levelManager, boolean isVictory, String characterUsed, int score, int shots, Skin skin) {
+    public WinLossMenu(PegBallStart game, LevelManager levelManager, boolean isVictory, String characterUsed, int score, int shots, float elapsedTime, Skin skin) {
         super(isVictory ? "YOU WIN!" : "Game Over!", skin);
         this.GAME = game;
         this.SKIN = skin;
@@ -27,6 +27,9 @@ public class WinLossMenu extends Window {
         Label resultLabel = new Label(isVictory ? "Congratulations!" : "Try again!", skin);
         Label scoreLabel = new Label("Score: " + score, skin);
         Label shotsLabel = new Label("Shots: " + shots, skin);
+        int minutes = (int) (elapsedTime / 60);
+        int seconds = (int) (elapsedTime % 60);
+        Label timerLabel = new Label(String.format("Time: %02d:%02d", minutes, seconds), skin);
 
         this.add(resultLabel).pad(10).row();
         if (isVictory) {
@@ -55,6 +58,7 @@ public class WinLossMenu extends Window {
         }
         this.add(scoreLabel).pad(10).row();
         this.add(shotsLabel).pad(10).row();
+        this.add(timerLabel).pad(10).row();
 
         // buttons
         TextButton retryButton = new TextButton("Retry", skin);

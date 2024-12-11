@@ -1,16 +1,20 @@
 {
 levelCompletion: {
 	class: java.util.HashMap
-	Test 100/1: true
-	Test 100/25: false
-	File Load: false
+	Alien: false
+	Test 100/1: false
+	Test 100/25: true
+	Mushroom: false
+	Custom: true
 	Test 10/1: true
 }
 highScores: {
 	class: java.util.HashMap
-	Test 100/1: 168740
-	Test 100/25: 0
-	File Load: 0
-	Test 10/1: 90230
+	Alien: 0
+	Test 100/1: 0
+	Test 100/25: 433300
+	Mushroom: 0
+	Custom: 141700
+	Test 10/1: 68220
 }
 }

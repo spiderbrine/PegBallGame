@@ -1,3 +1,4 @@
+Alien.png
 background.png
 bouncyBall.png
 default.fnt
@@ -6,6 +7,7 @@ electroBall.png
 font-small.fnt
 levelSelectScreen.png
 libgdx.png
+Mushroom.png
 pauseSound.mp3
 peg.png
 resumeSound.mp3
