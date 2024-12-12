@@ -9,13 +9,13 @@ import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
 public class MirrorBallPowerUp implements PowerUp {
     private boolean activated = false;
     private GameWorld gameWorld;
-    private int maxTurns = 2;
+    private int maxTurns = 3;
 
     @Override
     public void activate(Ball ball, GameWorld gameWorld) {
         this.gameWorld = gameWorld;
         if (activated) {
-            maxTurns += 3;
+            maxTurns += 4;
             System.out.println("Mirror-ball upgraded!");
         }
         activated = true;

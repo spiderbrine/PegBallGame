@@ -1,7 +1,7 @@
 {
 levelCompletion: {
 	class: java.util.HashMap
-	Alien: false
+	Alien: true
 	Test 100/1: false
 	Test 100/25: true
 	Mushroom: false
@@ -10,7 +10,7 @@ levelCompletion: {
 }
 highScores: {
 	class: java.util.HashMap
-	Alien: 0
+	Alien: 155880
 	Test 100/1: 0
 	Test 100/25: 323200
 	Mushroom: 0
