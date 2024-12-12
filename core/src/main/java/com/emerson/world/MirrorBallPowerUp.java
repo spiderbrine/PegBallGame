@@ -15,7 +15,7 @@ public class MirrorBallPowerUp implements PowerUp {
     public void activate(Ball ball, GameWorld gameWorld) {
         this.gameWorld = gameWorld;
         if (activated) {
-            maxTurns += 2;
+            maxTurns += 3;
             System.out.println("Mirror-ball upgraded!");
         }
         activated = true;

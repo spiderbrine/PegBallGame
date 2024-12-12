@@ -73,11 +73,22 @@ public class GameWorld {
     private int maxBalls = 50; // max number of balls to account for (bonus level is why its so high)
     private int ballsLeft;
     private Label ballsLeftLabel;
+    private Label currentTurnScoreLabel;
+    private Label freeBall25kLabel;
+    private Label freeBall75kLabel;
+    private Label freeBall125kLabel;
     private Label scoreLabel;
     private Label highScoreLabel;
     private Label multiplierLabel;
     private Label orangePegsHitLabel;
     private Label orangePegsLeftLabel;
+    private Label oneTimesLabel;
+    private Label twoTimesLabel;
+    private Label threeTimesLabel;
+    private Label fiveTimesLabel;
+    private Label tenTimesLabel;
+
+    private int freeBallsEarned = 0;
 
     private float elapsedTime = 0;
     private Label timerLabel;
@@ -92,6 +103,7 @@ public class GameWorld {
     private int pegIndex = 0;
     private Peg currentPurplePeg = null;
     private Peg focusedPeg = null;
+    private int previousPegsHit = 0;
 
     private boolean endCalled = false;
     private List<Ball> pegBalls = new ArrayList<>();
@@ -540,7 +552,6 @@ public class GameWorld {
                 gameContactListener.sludgeBallPowerUp.deactivate(ball, GameWorld.this);
                 gameContactListener.resetSludgeTurns();
             }
-            gameContactListener.sludgeBallPowerUp.deactivate(ball, GameWorld.this);
         }
         if (gameContactListener.mirrorBallPowerUp.active()) {
             gameContactListener.incrementMirrorTurns();
@@ -617,7 +628,7 @@ public class GameWorld {
                 }
             }
         }, (((float)gameContactListener.getPegsHit()) * .2f));
-
+        previousPegsHit = gameContactListener.getPegsHit();
         gameContactListener.resetPegsHit();
         gameContactListener.resetOrangePegsHit();
     }
@@ -628,6 +639,30 @@ public class GameWorld {
         ballsLeftLabel.setPosition(225, Gdx.graphics.getHeight() - 50);
         ballsLeftLabel.setFontScale(1.5f);
         stage.addActor(ballsLeftLabel);
+
+        currentTurnScoreLabel = new Label("Turn Score: " + gameContactListener.getTurnScore(), skin);
+        currentTurnScoreLabel.setColor(Color.RED);
+        currentTurnScoreLabel.setPosition(225, Gdx.graphics.getHeight() - 70);
+        currentTurnScoreLabel.setFontScale(1.5f);
+        stage.addActor(currentTurnScoreLabel);
+
+        freeBall25kLabel = new Label("25,000 Turn Score\n    +1 Free Ball", skin);
+        freeBall25kLabel.setColor(Color.RED);
+        freeBall25kLabel.setPosition(220, 500);
+        freeBall25kLabel.setFontScale(1.3f);
+        stage.addActor(freeBall25kLabel);
+
+        freeBall75kLabel = new Label("75,000 Turn Score\n    +1 Free Ball", skin);
+        freeBall75kLabel.setColor(Color.RED);
+        freeBall75kLabel.setPosition(220, 400);
+        freeBall75kLabel.setFontScale(1.3f);
+        stage.addActor(freeBall75kLabel);
+
+        freeBall125kLabel = new Label("125,000 Turn Score\n      +1 Free Ball", skin);
+        freeBall125kLabel.setColor(Color.RED);
+        freeBall125kLabel.setPosition(205, 300);
+        freeBall125kLabel.setFontScale(1.4f);
+        stage.addActor(freeBall125kLabel);
 
         scoreLabel = new Label("Score: " + gameContactListener.getTotalScore(), skin);
         scoreLabel.setColor(Color.BLACK);
@@ -640,6 +675,36 @@ public class GameWorld {
         multiplierLabel.setPosition(885, Gdx.graphics.getHeight() - 90);
         multiplierLabel.setFontScale(1.5f);
         stage.addActor(multiplierLabel);
+
+        oneTimesLabel = new Label("  1x - 0 orange hit", skin);
+        oneTimesLabel.setColor(Color.ORANGE);
+        oneTimesLabel.setPosition(885, 10);
+        oneTimesLabel.setFontScale(1.3f);
+        stage.addActor(oneTimesLabel);
+
+        twoTimesLabel = new Label("  2x - 10 orange hit", skin);
+        twoTimesLabel.setColor(Color.ORANGE);
+        twoTimesLabel.setPosition(885, 160);
+        twoTimesLabel.setFontScale(1.3f);
+        stage.addActor(twoTimesLabel);
+
+        threeTimesLabel = new Label("  3x - 15 orange hit", skin);
+        threeTimesLabel.setColor(Color.ORANGE);
+        threeTimesLabel.setPosition(885, 310);
+        threeTimesLabel.setFontScale(1.3f);
+        stage.addActor(threeTimesLabel);
+
+        fiveTimesLabel = new Label("  5x - 19 orange hit", skin);
+        fiveTimesLabel.setColor(Color.ORANGE);
+        fiveTimesLabel.setPosition(885, 460);
+        fiveTimesLabel.setFontScale(1.3f);
+        stage.addActor(fiveTimesLabel);
+
+        tenTimesLabel = new Label("10x - 22 orange hit", skin);
+        tenTimesLabel.setColor(Color.ORANGE);
+        tenTimesLabel.setPosition(885, 600);
+        tenTimesLabel.setFontScale(1.3f);
+        stage.addActor(tenTimesLabel);
 
         highScoreLabel = new Label("High Score: " + saveData.highScores.get(levelManager.getCurrentLevel().getLevelName()), skin);
         highScoreLabel.setColor(Color.BLACK);
@@ -663,6 +728,8 @@ public class GameWorld {
     private void updateLabels() {
         ballsLeftLabel.setText("Balls left: " + getBallsLeft());
 
+        currentTurnScoreLabel.setText("Turn Score: " + gameContactListener.getTurnScore());
+
         multiplierLabel.setText("Multiplier: " + gameContactListener.getScoreMultiplier() + "x");
 
         orangePegsHitLabel.setText("Orange Pegs hit: " + gameContactListener.getTotalOrangePegsHit());
@@ -685,6 +752,7 @@ public class GameWorld {
         messageLabel.setFontScale(1.5f);
         stage.addActor(messageLabel);
         ballsLeft++;
+        freeBallsEarned++;
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
@@ -829,7 +897,7 @@ public class GameWorld {
     public void showWinLossMessage() {
         isTimerRunning = false;
         WinLossMenu menu = new WinLossMenu(GAME, GAME.getLevelManager(), checkOrangePegs(), characterSelectMenu.getCharacter(), gameContactListener.getTotalScore(),
-            shotsTaken, elapsedTime, skin);
+            shotsTaken, freeBallsEarned, elapsedTime, skin);
         stage.addActor(menu);
         /*
         Label winMessage = new Label("YOU WIN!!!", skin);
@@ -856,6 +924,33 @@ public class GameWorld {
     public void applyQueuedChanges() {
         while (!physicsChangesQueue.isEmpty()) {
             physicsChangesQueue.poll().run();
+        }
+    }
+
+    public static boolean coinFlip() {
+        return MathUtils.randomBoolean();
+    }
+
+    private void noPegsCoinFlip() {
+        if (previousPegsHit == 0) {
+            boolean result = coinFlip();
+            if (result) {
+                System.out.println("Heads!");
+                giveFreeBall(new Vector2((viewport.getWorldWidth() / 2),50));
+            } else {
+                System.out.println("Tails!");
+                Label messageLabel = new Label("NO FREE BALL", skin);
+                messageLabel.setColor(Color.RED);
+                messageLabel.setPosition((viewport.getWorldWidth() / 2) - (messageLabel.getWidth()), 50);
+                messageLabel.setFontScale(1.5f);
+                stage.addActor(messageLabel);
+                Timer.schedule(new Timer.Task() {
+                    @Override
+                    public void run() {
+                        messageLabel.remove();
+                    }
+                },2f);
+            }
         }
     }
 
@@ -960,6 +1055,7 @@ public class GameWorld {
             } else if (pegBalls.isEmpty() && checkBallOutOfBounds()) {
                 endTurn();
                 showBallOutOfBoundsMessage();
+                noPegsCoinFlip();
             }
         } else {
             if (checkBallOutOfBounds() && checkPegBallsOutOfBounds()) {
@@ -1104,6 +1200,7 @@ public class GameWorld {
         }
         Gdx.input.setInputProcessor(null);
         timeScale = 1f;
+        freeBallsEarned = 0;
         isPaused = false;
         resetTimer();
         characterSelected = false;
@@ -1188,6 +1285,10 @@ public class GameWorld {
 
     public int getBallsLeft() {
         return ballsLeft;
+    }
+
+    public int getFreeBallsEarned() {
+        return freeBallsEarned;
     }
 
     public PegBallStart getGAME() {

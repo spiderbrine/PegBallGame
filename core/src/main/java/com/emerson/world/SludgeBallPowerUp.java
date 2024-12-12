@@ -21,7 +21,7 @@ public class SludgeBallPowerUp implements PowerUp {
         this.gameWorld = gameWorld;
         // upgrade logic
         if (activated) {
-            maxTurns += 1;
+            maxTurns += 3;
             DRIP_RADIUS = 100f;
             System.out.println("Sludge-ball upgraded!");
         }

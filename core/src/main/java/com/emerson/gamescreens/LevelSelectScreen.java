@@ -151,7 +151,7 @@ public class LevelSelectScreen implements Screen {
         if (saveData.levelCompletion.getOrDefault(GAME.getLevelManager().getLevel(4).getLevelName(), false)) {
             levelButton5.setColor(Color.LIME);
         } else {
-            levelButton5.setColor(Color.RED);
+            levelButton5.setColor(0.5f, 0.5f, 1f, 1f); // mirror color
         }
         levelButton5.getLabel().setFontScale(1.7f);
         //levelButton5.setPosition((Gdx.graphics.getWidth() / 2f) - (levelButton5.getWidth() / 2), (Gdx.graphics.getHeight() / 2f) - (levelButton5.getHeight() / 2) + 80);
@@ -187,9 +187,9 @@ public class LevelSelectScreen implements Screen {
         table.setFillParent(false);
         table.add(levelButton).pad(10);
         table.add(levelButton2).pad(10);
-        table.add(levelButton3).pad(10);
+        table.add(levelButton3).pad(10).row();
         table.add(levelButton4).pad(10);
-        table.add(levelButton5).pad(10);
+        table.add(levelButton5).pad(10); // mirror level
         table.add(levelButton6).pad(10);
         stage.addActor(table);
         // pack then set position

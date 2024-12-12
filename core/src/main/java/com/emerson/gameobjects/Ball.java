@@ -9,6 +9,9 @@ public class Ball extends GameObject{
 
     private final float STUCK_THRESHOLD = 4f;
     private final float MAX_STUCK_TIME = 2.5f;
+    private float lastX;
+    private float xStuckTime = 0;
+    private float stuckThreshold = 6f;
     private final Vector2 JOLT_IMPULSE = new Vector2(MathUtils.random(-500000000,500000000), 5000000f);
 
     private World world;
@@ -55,7 +58,7 @@ public class Ball extends GameObject{
         Vector2 velocity = body.getLinearVelocity();
         //System.out.println(velocity);
         // check stuck
-        if (velocity.len() < STUCK_THRESHOLD) {
+        if ((velocity.len() < STUCK_THRESHOLD)) {
             stuckTime += deltaTime;
             if (stuckTime >= MAX_STUCK_TIME) {
                 // apply jolt
@@ -67,6 +70,24 @@ public class Ball extends GameObject{
             // ball is moving, reset stuck timer
             stuckTime = 0;
         }
+        float currentX = position.x;
+
+        if (Math.abs(currentX - lastX) < 0.1f) {
+            xStuckTime += deltaTime;
+            if (xStuckTime > stuckThreshold) {
+                System.out.println("Ball bouncing too long!");
+
+                body.applyLinearImpulse(JOLT_IMPULSE, body.getWorldCenter(), true);
+
+                xStuckTime = 0;
+                System.out.println("Ball was stuck. Applied jolt!");
+            }
+        } else {
+            // ball moving reset timer
+            xStuckTime = 0;
+        }
+
+        lastX = currentX;
     }
 
     public static final float PPM = 100;  // this is ass 6 hours of my life spent on this***

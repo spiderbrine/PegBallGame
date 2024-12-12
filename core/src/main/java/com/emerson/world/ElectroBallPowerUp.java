@@ -21,7 +21,7 @@ public class ElectroBallPowerUp implements PowerUp {
     public void activate(Ball ball, GameWorld gameWorld) {
         this.gameWorld = gameWorld;
         if (activated) {
-            maxTurns += 2;
+            maxTurns += 3;
             electroNum = 3;
             System.out.println("Electro-ball upgraded!");
         }
