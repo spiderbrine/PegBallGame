@@ -42,7 +42,7 @@ public class LevelManager {
         levels.add(new Level(GAME, this, "Shield", new Texture("Shield.png"), 100, 25, true));
 
         levels.add(new Level(GAME, this, "Practice", null, 100, 25, false));
-        levels.add(new Level(GAME, this, "Custom", null, 100, 1, false));
+        levels.add(new Level(GAME, this, "Custom", null, 100, 25, false));
     }
 
     public Level getCurrentLevel() {

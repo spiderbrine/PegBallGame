@@ -6,7 +6,7 @@ levelCompletion: {
 	Roblox Dio: false
 	Godzilla: false
 	Christmas: false
-	Garfield: false
+	Garfield: true
 	Butterfly: false
 	Shield: false
 	Bingus: true
@@ -17,7 +17,7 @@ levelCompletion: {
 	Fire Giant: true
 	Koala Mario: false
 	Ladybug: false
-	Snowman: false
+	Snowman: true
 }
 highScores: {
 	class: java.util.HashMap
@@ -26,7 +26,7 @@ highScores: {
 	Roblox Dio: 0
 	Godzilla: 0
 	Christmas: 0
-	Garfield: 0
+	Garfield: 186950
 	Butterfly: 0
 	Shield: 0
 	Bingus: 214050
@@ -37,6 +37,6 @@ highScores: {
 	Fire Giant: 238510
 	Koala Mario: 0
 	Ladybug: 0
-	Snowman: 0
+	Snowman: 188010
 }
 }
