@@ -20,12 +20,29 @@ public class LevelManager {
     }
 
     private void loadLevels() {
-        levels.add(new Level(GAME, this, "Test 100/1", null, 100, 1, false));
-        levels.add(new Level(GAME, this, "Test 100/25", null, 100, 25, false));
-        levels.add(new Level(GAME, this, "Test 10/1", null, 10, 1, false));
+        //levels.add(new Level(GAME, this, "Test 100/1", null, 100, 1, false));
+        //levels.add(new Level(GAME, this, "Practice", null, 100, 25, false));
+        //levels.add(new Level(GAME, this, "Test 10/1", null, 10, 1, false));
+
         levels.add(new Level(GAME, this, "Alien", new Texture("Alien.png"), 77, 25, false));
+        levels.add(new Level(GAME, this, "Solid Snake", new Texture("Snake.png"), 81, 25, false));
+        levels.add(new Level(GAME, this, "Koala Mario", new Texture("Mario.png"), 82, 25, false));
+        levels.add(new Level(GAME, this, "Houndeye", new Texture("Houndeye.png"), 86, 25, false));
+        levels.add(new Level(GAME, this, "Roblox Dio", new Texture("Dio.png"), 88, 25, false));
+        levels.add(new Level(GAME, this, "Snowman", new Texture("Snowman.png"), 93, 25, false));
+        levels.add(new Level(GAME, this, "Garfield", new Texture("Garfield.png"), 94, 25, false));
+        levels.add(new Level(GAME, this, "Bingus", new Texture("Bingus.png"), 96, 25, false));
+        levels.add(new Level(GAME, this, "Godzilla", new Texture("Godzilla.png"), 97, 25, false));
+        levels.add(new Level(GAME, this, "Fire Giant", new Texture("Giant.png"), 98, 25, false));
+
+        levels.add(new Level(GAME, this, "Butterfly", new Texture("Butterfly.png"), 88, 25, true));
+        levels.add(new Level(GAME, this, "Christmas", new Texture("Christmas.png"), 92, 25, true));
+        levels.add(new Level(GAME, this, "Ladybug", new Texture("Ladybug.png"), 100, 25, true));
         levels.add(new Level(GAME, this, "Mushroom", new Texture("Mushroom.png"), 100, 25, true));
-        levels.add(new Level(GAME, this, "Custom", new Texture("Alien.png"), 100, 1, false));
+        levels.add(new Level(GAME, this, "Shield", new Texture("Shield.png"), 100, 25, true));
+
+        levels.add(new Level(GAME, this, "Practice", null, 100, 25, false));
+        levels.add(new Level(GAME, this, "Custom", null, 100, 1, false));
     }
 
     public Level getCurrentLevel() {

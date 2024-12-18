@@ -1,5 +1,6 @@
 package com.emerson.gameobjects;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -98,6 +99,13 @@ public class Ball extends GameObject{
         float ballX = body.getPosition().x * PPM;
         float ballY = body.getPosition().y * PPM;
         shapeRenderer.circle(position.x, position.y, width / 2);  // render based on width (radius)
+
+        shapeRenderer.setAutoShapeType(true);
+        shapeRenderer.set(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(Color.BLACK);
+        shapeRenderer.circle(position.x, position.y, width / 2);  // render based on width (radius)
+        shapeRenderer.set(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(1, 0.5f, 0.5f, 1);
 
     }
 

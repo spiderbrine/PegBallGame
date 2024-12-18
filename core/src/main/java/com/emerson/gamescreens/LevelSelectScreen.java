@@ -2,6 +2,8 @@ package com.emerson.gamescreens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -42,6 +44,10 @@ public class LevelSelectScreen implements Screen {
     private OrthographicCamera camera;
     private Viewport viewport;
 
+    private Music selectMusic;
+    private Sound confirmSound;
+    private Sound backSound;
+
     public LevelSelectScreen(PegBallStart game){
         this.GAME = game;
         SaveData saveData = GAME.getGameDataManager().loadGameData();
@@ -60,6 +66,14 @@ public class LevelSelectScreen implements Screen {
 
         skin = new Skin(Gdx.files.internal("uiskin.json"));
 
+        selectMusic = Gdx.audio.newMusic(Gdx.files.internal("selectMusic.mp3"));
+        selectMusic.setVolume(0.375f);
+        selectMusic.setLooping(true);
+        selectMusic.play();
+        confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirmSound.mp3"));
+        backSound = Gdx.audio.newSound(Gdx.files.internal("backSound.mp3"));
+
+        /*
         // test button loads test world
         TextButton levelButton = new TextButton(GAME.getLevelManager().getLevel(1).getLevelName() + "\nHigh Score: "
             + saveData.highScores.get(GAME.getLevelManager().getLevel(1).getLevelName()), skin);
@@ -78,6 +92,8 @@ public class LevelSelectScreen implements Screen {
         levelButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                confirmSound.play();
                 GAME.setScreen(new GameScreen(GAME, 1));
             }
         });
@@ -98,6 +114,8 @@ public class LevelSelectScreen implements Screen {
         levelButton2.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                confirmSound.play();
                 GAME.setScreen(new GameScreen(GAME, 0));
             }
         });
@@ -118,6 +136,8 @@ public class LevelSelectScreen implements Screen {
         levelButton3.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                confirmSound.play();
                 GAME.setScreen(new GameScreen(GAME, 2));
             }
         });
@@ -138,6 +158,8 @@ public class LevelSelectScreen implements Screen {
         levelButton4.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                confirmSound.play();
                 GAME.setScreen(new GameScreen(GAME, 3));
             }
         });
@@ -158,6 +180,8 @@ public class LevelSelectScreen implements Screen {
         levelButton5.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                confirmSound.play();
                 GAME.setScreen(new GameScreen(GAME, 4));
             }
         });
@@ -178,12 +202,18 @@ public class LevelSelectScreen implements Screen {
         levelButton6.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                confirmSound.play();
                 GAME.setScreen(new GameScreen(GAME, 5));
             }
         });
         //stage.addActor(levelButton6);
 
+         */
+
         table = new Table();
+
+        /*
         table.setFillParent(false);
         table.add(levelButton).pad(10);
         table.add(levelButton2).pad(10);
@@ -191,10 +221,19 @@ public class LevelSelectScreen implements Screen {
         table.add(levelButton4).pad(10);
         table.add(levelButton5).pad(10); // mirror level
         table.add(levelButton6).pad(10);
+         */
+
+        for (int i = 0; i < GAME.getLevelManager().getLevels().size(); i++) {
+            if ((i + 1) % 5 == 0) {
+                table.add(addLevelButton(i, saveData)).pad(10f).row();
+            } else {
+                table.add(addLevelButton(i, saveData)).pad(10f);
+            }
+        }
         stage.addActor(table);
         // pack then set position
         table.pack();
-        table.setPosition((Gdx.graphics.getWidth()/2f)-(table.getWidth()/2), Gdx.graphics.getHeight()/2f);
+        table.setPosition((Gdx.graphics.getWidth()/2f)-(table.getWidth()/2), 105);
 
         TextButton backButton = new TextButton("Back", skin);
         backButton.setWidth(70);
@@ -202,15 +241,49 @@ public class LevelSelectScreen implements Screen {
         backButton.setColor(Color.RED);
         backButton.getLabel().setFontScale(1.7f);
         backButton.setPosition((Gdx.graphics.getWidth() / 2f) - (backButton.getWidth() / 2),
-            (Gdx.graphics.getHeight() / 3f) - (backButton.getHeight() / 2));
+            50f - (backButton.getHeight() / 2));
         backButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                backSound.play();
                 GAME.setScreen(new TitleScreen(GAME)); // back to title
             }
         });
         stage.addActor(backButton);
 
+    }
+
+    private TextButton addLevelButton(int levelIndex, SaveData saveData) {
+
+        TextButton levelButton = new TextButton(GAME.getLevelManager().getLevel(levelIndex).getLevelName() + "\nHigh Score:\n"
+            + saveData.highScores.get(GAME.getLevelManager().getLevel(levelIndex).getLevelName()), skin);
+
+        if (saveData.levelCompletion.getOrDefault(GAME.getLevelManager().getLevel(levelIndex).getLevelName(), false)) {
+            levelButton.setColor(Color.LIME);
+        } else {
+            if (GAME.getLevelManager().getLevel(levelIndex).isMirror()) {
+                levelButton.setColor(0.5f, 0.5f, 1f, 1f); // mirror color
+            } else {
+                levelButton.setColor(Color.RED);
+            }
+        }
+        levelButton.getLabel().setFontScale(1.7f);
+
+        levelButton.setWidth(buttonWidth);
+        levelButton.setHeight(buttonHeight);
+
+        //levelButton.setPosition(((Gdx.graphics.getWidth() * 3f)/4f) - (levelButton.getWidth() / 2), (Gdx.graphics.getHeight() / 2f) - (levelButton.getHeight() / 2));
+        levelButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                selectMusic.stop();
+                confirmSound.play();
+                GAME.setScreen(new GameScreen(GAME, levelIndex));
+            }
+        });
+        //stage.addActor(levelButton);
+        return levelButton;
     }
 
     @Override

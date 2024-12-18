@@ -31,12 +31,24 @@ public class Level {
     public void setupLevel(int index) {
         gameWorld.setBackgroundTexture(background);
         gameWorld.createObstacles();
-        if (index < 3) {
-            createTestLevel();
+        if (index == 0) {
+            gameWorld.loadLevelFromFile(levelName+".json", 7);
+        } else if (index == 1) {
+            gameWorld.loadLevelFromFile("Snake.json", 7);
+        } else if (index == 2) {
+            gameWorld.loadLevelFromFile("Mario.json", 7);
         } else if (index == 3) {
             gameWorld.loadLevelFromFile(levelName+".json", 7);
         } else if (index == 4) {
+            gameWorld.loadLevelFromFile("Dio.json", 7);
+        } else if (index >= 5 && index <= 8) {
+            gameWorld.loadLevelFromFile(levelName+".json", 7);
+        } else if (index == 9) {
+            gameWorld.loadLevelFromFile("Giant.json", 7);
+        } else if (index >= 10 && index <= 14) {
             gameWorld.loadMirrorLevelFromFile(levelName+".json", 7 );
+        } else if (index == 15) {
+            createTestLevel();
         } else {
             gameWorld.loadLevelFromFile("level.json", 7);
         }

@@ -3,6 +3,8 @@ package com.emerson.gamescreens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -39,7 +41,7 @@ public class LevelEditorScreen implements Screen {
     private Skin skin;
     private Array<Vector2> pegPositions; // Store peg positions
     private SpriteBatch batch;
-    private Texture backgroundTexture = new Texture("background.png");
+    private Texture backgroundTexture;
     private TextButton backButton;
     private TextButton saveButton;
     private TextButton loadButton;
@@ -48,9 +50,15 @@ public class LevelEditorScreen implements Screen {
     private OrthographicCamera camera;
     private Viewport viewport;
     private ShapeRenderer shapeRenderer;
+    private Music editMusic;
+    private Sound backSound;
+    private Sound confirmSound;
 
     public LevelEditorScreen(PegBallStart game) {
         this.GAME = game;
+        if (backgroundTexture != null) {
+            backgroundTexture = new Texture("background.png");
+        }
 
         pegPositions = new Array<>();
         stage = new Stage(new ScreenViewport());
@@ -66,10 +74,18 @@ public class LevelEditorScreen implements Screen {
         camera.position.set(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, 0);
         camera.update();
 
+        editMusic = Gdx.audio.newMusic(Gdx.files.internal("editMusic.mp3"));
+        backSound = Gdx.audio.newSound(Gdx.files.internal("backSound.mp3"));
+        confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirmSound.mp3"));
+
         setupUI();
     }
 
     private void setupUI() {
+
+        editMusic.setVolume(0.25f);
+        editMusic.setLooping(true);
+        editMusic.play();
 
         backButton = new TextButton("Back", skin);
         backButton.setTouchable(Touchable.enabled);
@@ -77,6 +93,8 @@ public class LevelEditorScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 System.out.println("Back button clicked");
+                editMusic.stop();
+                backSound.play();
                 GAME.setScreen(new TitleScreen(GAME));
                 event.stop();
             }
@@ -88,6 +106,7 @@ public class LevelEditorScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 System.out.println("Save button clicked");
+                confirmSound.play();
                 saveLevel("level.json");
                 event.stop();
             }
@@ -133,9 +152,17 @@ public class LevelEditorScreen implements Screen {
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        batch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+        if (backgroundTexture != null) {
+            batch.draw(backgroundTexture, 0, 0, viewport.getWorldWidth(), viewport.getWorldHeight());
+        }
         batch.end();
 
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(Color.BLACK);
+        shapeRenderer.rect(400, 0, 480, 45);
+        shapeRenderer.rect(200, 0, 200, 720);
+        shapeRenderer.rect(880, 0, 200, 720);
+        shapeRenderer.end();
 
         // render peg visuals
         stage.getBatch().begin();
@@ -151,10 +178,6 @@ public class LevelEditorScreen implements Screen {
         }
         stage.draw();
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(Color.BLACK);
-        shapeRenderer.rect(400, 0, 480, 45);
-        shapeRenderer.end();
         //stage.setDebugAll(true);
     }
 
@@ -200,6 +223,7 @@ public class LevelEditorScreen implements Screen {
         String jsonData = json.toJson(pegPositions);
         FileHandle file = Gdx.files.local(fileName);
         file.writeString(jsonData, false);
+        confirmSound.play();
         System.out.println("Level saved as " + fileName);
     }
 
@@ -209,11 +233,13 @@ public class LevelEditorScreen implements Screen {
         FileHandle file = Gdx.files.local(fileName);
         if (!file.exists()) {
             System.out.println("No saved level found!");
+            backSound.play();
             return;
         }
 
         Json json = new Json();
         pegPositions = json.fromJson(Array.class, Vector2.class, file.readString());
+        confirmSound.play();
         System.out.println("Level loaded from " + fileName);
     }
 
@@ -244,6 +270,7 @@ public class LevelEditorScreen implements Screen {
         backgroundTexture.dispose();
         stage.dispose();
         skin.dispose();
+        editMusic.dispose();
     }
 
     // Other Screen interface methods (pause, resume, hide, show) can be left empty

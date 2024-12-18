@@ -36,10 +36,12 @@ public class OsmiumBallPowerUp implements PowerUp {
         System.out.println("Dupe fixture stats");
 
         if (activated) {
+            ball.getBody().setGravityScale(3); // this does the bulk of the work, not the density ironically
             newFixtureDef.density = 5f;
             newFixtureDef.restitution = 0.815f;
             System.out.println("Make changes (active)");
         } else {
+            ball.getBody().setGravityScale(1);
             newFixtureDef.density = 0.85f;
             newFixtureDef.restitution = 0.78f;
             System.out.println("Make changes (deactive)");

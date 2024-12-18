@@ -2,6 +2,8 @@ package com.emerson.gamescreens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -30,6 +32,9 @@ public class TitleScreen implements Screen {
     private OrthographicCamera camera;
     private Viewport viewport;
 
+    private Music titleMusic;
+    private Sound confirmSound;
+
     public TitleScreen(PegBallStart game){
         this.GAME = game;
         stage = new Stage(new ScreenViewport());
@@ -44,7 +49,13 @@ public class TitleScreen implements Screen {
         // ui skin for buttons
         skin = new Skin(Gdx.files.internal("uiskin.json"));
 
-        Label tipLabel = new Label("Pro Tip: If you hit a green peg while a power is already active, magic happens...", skin);
+        titleMusic = Gdx.audio.newMusic(Gdx.files.internal("titleMusic.mp3"));
+        titleMusic.setVolume(0.45f);
+        titleMusic.setLooping(true);
+        titleMusic.play();
+        confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirmSound.mp3"));
+
+        Label tipLabel = new Label("Pro Tip: The Ball-O-Tron 2.0 doesn't always start in the most advantageous spot...", skin);
         tipLabel.setColor(Color.GREEN);
         tipLabel.setPosition((Gdx.graphics.getWidth()/2)-(tipLabel.getWidth()/2), 10);
         stage.addActor(tipLabel);
@@ -60,6 +71,8 @@ public class TitleScreen implements Screen {
         playButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                titleMusic.stop();
+                confirmSound.play();
                 game.setScreen(new LevelSelectScreen(game)); // go to level select
             }
         });
@@ -76,6 +89,8 @@ public class TitleScreen implements Screen {
         editButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                titleMusic.stop();
+                confirmSound.play();
                 game.setScreen(new LevelEditorScreen(game));
             }
         });

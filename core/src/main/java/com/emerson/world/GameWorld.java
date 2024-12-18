@@ -2,6 +2,7 @@ package com.emerson.world;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -14,10 +15,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.*;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.ui.Window;
+import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Timer;
@@ -33,6 +31,7 @@ import com.emerson.pegballgame.PegBallStart;
 import com.emerson.savedata.SaveData;
 
 import java.util.*;
+import java.util.List;
 
 import static com.emerson.gamescreens.GameScreen.VIRTUAL_HEIGHT;
 import static com.emerson.gamescreens.GameScreen.VIRTUAL_WIDTH;
@@ -52,12 +51,17 @@ public class GameWorld {
     private SaveData saveData;
 
     private SpriteBatch batch;
-    private Texture backgroundTexture = new Texture("background.png");
+    private Texture backgroundTexture;
 
     private Stage stage;
     private final Skin skin = new Skin(Gdx.files.internal("uiskin.json"));
     private Sound pauseSound;
     private Sound resumeSound;
+    private Sound backSound;
+    private Sound freeBall;
+    private Sound noBall;
+    private Music frenzyMusic;
+    private Music levelMusic;
 
     public CharacterSelectMenu characterSelectMenu;
     private Stage characterSelectStage;
@@ -78,7 +82,9 @@ public class GameWorld {
     private Label freeBall75kLabel;
     private Label freeBall125kLabel;
     private Label scoreLabel;
+    private Label scoreShadow;
     private Label highScoreLabel;
+    private Label highScoreShadow;
     private Label multiplierLabel;
     private Label orangePegsHitLabel;
     private Label orangePegsLeftLabel;
@@ -157,6 +163,14 @@ public class GameWorld {
 
         pauseSound = Gdx.audio.newSound(Gdx.files.internal("pauseSound.mp3"));
         resumeSound = Gdx.audio.newSound(Gdx.files.internal("resumeSound.mp3"));
+        backSound = Gdx.audio.newSound(Gdx.files.internal("backSound.mp3"));
+        freeBall = Gdx.audio.newSound(Gdx.files.internal("freeBall.ogg"));
+        noBall = Gdx.audio.newSound(Gdx.files.internal("noBall.ogg"));
+        frenzyMusic = Gdx.audio.newMusic(Gdx.files.internal("frenzyMusic.mp3"));
+        levelMusic = Gdx.audio.newMusic(Gdx.files.internal("levelMusic.mp3"));
+        levelMusic.setVolume(0.3f);
+        levelMusic.setLooping(true);
+        levelMusic.play();
 
         world = new World(new Vector2(0f, -50.0f), true);
 
@@ -205,7 +219,8 @@ public class GameWorld {
             public void clicked(InputEvent event, float x, float y) {
                 System.out.println("THE WORLD! STOP TIME!");
                 togglePause();
-                pauseSound.play();
+                resumeSound.stop();
+                pauseSound.setVolume(pauseSound.play(), 0.5f);
                 showPauseMenu();
                 event.stop();
             }
@@ -564,6 +579,27 @@ public class GameWorld {
             gameContactListener.osmiumBallPowerUp.deactivate(ball, GameWorld.this);
         }
 
+        Label messageLabelShadow = new Label("PEGS HIT: " + gameContactListener.getPegsHit(), skin);
+        messageLabelShadow.setColor(Color.LIGHT_GRAY);
+        messageLabelShadow.setPosition((viewport.getWorldWidth() / 2) - (messageLabelShadow.getWidth()) - 2,
+            (viewport.getWorldHeight() / 2) - 2);
+        messageLabelShadow.setFontScale(2f);
+        stage.addActor(messageLabelShadow);
+
+        Label messageLabel2Shadow = new Label("ORANGE PEGS HIT: " + gameContactListener.getOrangePegsHit(), skin);
+        messageLabel2Shadow.setColor(Color.LIGHT_GRAY);
+        messageLabel2Shadow.setPosition((viewport.getWorldWidth() / 2) - (messageLabel2Shadow.getWidth()) - 2,
+            (viewport.getWorldHeight() / 2) - 40 - 2);
+        messageLabel2Shadow.setFontScale(2f);
+        stage.addActor(messageLabel2Shadow);
+
+        int newTotalScore = gameContactListener.getTurnScore() * gameContactListener.getPegsHit();
+        Label turnScoreLabelShadow = new Label(gameContactListener.getTurnScore() + " X " + gameContactListener.getPegsHit() + " PEGS = " + newTotalScore, skin);
+        turnScoreLabelShadow.setColor(Color.LIGHT_GRAY);
+        turnScoreLabelShadow.setPosition((viewport.getWorldWidth() / 2) - (turnScoreLabelShadow.getWidth()) - 2,
+            (viewport.getWorldHeight() / 2) - 80 - 2);
+        turnScoreLabelShadow.setFontScale(2f);
+        stage.addActor(turnScoreLabelShadow);
 
         Label messageLabel = new Label("PEGS HIT: " + gameContactListener.getPegsHit(), skin);
         messageLabel.setColor(Color.BLACK);
@@ -579,9 +615,8 @@ public class GameWorld {
         messageLabel2.setFontScale(2f);
         stage.addActor(messageLabel2);
 
-        int newTotalScore = gameContactListener.getTurnScore() * gameContactListener.getPegsHit();
         Label turnScoreLabel = new Label(gameContactListener.getTurnScore() + " X " + gameContactListener.getPegsHit() + " PEGS = " + newTotalScore, skin);
-        turnScoreLabel.setColor(Color.BLACK);
+        turnScoreLabel.setColor(Color.PURPLE);
         turnScoreLabel.setPosition((viewport.getWorldWidth() / 2) - (turnScoreLabel.getWidth()),
             (viewport.getWorldHeight() / 2) - 80);
         turnScoreLabel.setFontScale(2f);
@@ -590,6 +625,9 @@ public class GameWorld {
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
+                messageLabelShadow.remove();
+                messageLabel2Shadow.remove();
+                turnScoreLabelShadow.remove();
                 messageLabel.remove();
                 messageLabel2.remove();
                 turnScoreLabel.remove();
@@ -609,7 +647,12 @@ public class GameWorld {
 
                      */
                 } else if (checkOrangePegs()) {
-                    // might have to change something up here for ending sequence with score buckets
+                    Label frenzyScoreShadow = new Label("FRENZY SCORE: " + frenzyScore, skin);
+                    frenzyScoreShadow.setColor(Color.BLACK);
+                    frenzyScoreShadow.setPosition((VIRTUAL_WIDTH / 2) - (frenzyScoreShadow.getWidth()) - 2, (VIRTUAL_HEIGHT / 2) + (VIRTUAL_HEIGHT / 4) - 2);
+                    frenzyScoreShadow.setFontScale(2f);
+                    stage.addActor(frenzyScoreShadow);
+
                     Label frenzyScoreLabel = new Label("FRENZY SCORE: " + frenzyScore, skin);
                     frenzyScoreLabel.setColor(Color.ORANGE);
                     frenzyScoreLabel.setPosition((VIRTUAL_WIDTH / 2) - (frenzyScoreLabel.getWidth()), (VIRTUAL_HEIGHT / 2) + (VIRTUAL_HEIGHT / 4));
@@ -618,6 +661,7 @@ public class GameWorld {
                     Timer.schedule(new Timer.Task() {
                         @Override
                         public void run() {
+                            frenzyScoreShadow.remove();
                             frenzyScoreLabel.remove();
                             showWinLossMessage();
                         }
@@ -664,10 +708,16 @@ public class GameWorld {
         freeBall125kLabel.setFontScale(1.4f);
         stage.addActor(freeBall125kLabel);
 
+        scoreShadow = new Label("Score: " + gameContactListener.getTotalScore(), skin);
+        scoreShadow.setColor(Color.BLACK);
+        scoreShadow.setPosition(423, Gdx.graphics.getHeight() - 22);
+        scoreShadow.setFontScale(1.75f);
+        stage.addActor(scoreShadow);
+
         scoreLabel = new Label("Score: " + gameContactListener.getTotalScore(), skin);
-        scoreLabel.setColor(Color.BLACK);
+        scoreLabel.setColor(Color.PURPLE);
         scoreLabel.setPosition(425, Gdx.graphics.getHeight() - 20);
-        scoreLabel.setFontScale(1.5f);
+        scoreLabel.setFontScale(1.75f);
         stage.addActor(scoreLabel);
 
         multiplierLabel = new Label("Multiplier: " + gameContactListener.getScoreMultiplier() + "x", skin);
@@ -706,8 +756,14 @@ public class GameWorld {
         tenTimesLabel.setFontScale(1.3f);
         stage.addActor(tenTimesLabel);
 
+        highScoreShadow = new Label("High Score: " + saveData.highScores.get(levelManager.getCurrentLevel().getLevelName()), skin);
+        highScoreShadow.setColor(Color.BLACK);
+        highScoreShadow.setPosition(698, Gdx.graphics.getHeight() - 22);
+        highScoreShadow.setFontScale(1.3f);
+        stage.addActor(highScoreShadow);
+
         highScoreLabel = new Label("High Score: " + saveData.highScores.get(levelManager.getCurrentLevel().getLevelName()), skin);
-        highScoreLabel.setColor(Color.BLACK);
+        highScoreLabel.setColor(Color.GOLD);
         highScoreLabel.setPosition(700, Gdx.graphics.getHeight() - 20);
         highScoreLabel.setFontScale(1.3f);
         stage.addActor(highScoreLabel);
@@ -738,6 +794,7 @@ public class GameWorld {
     }
 
     private void updateScoreLabel() {
+        scoreShadow.setText("Score: " + gameContactListener.getTotalScore());
         scoreLabel.setText("Score: " + gameContactListener.getTotalScore());
     }
 
@@ -746,6 +803,12 @@ public class GameWorld {
     }
 
     public void giveFreeBall(Vector2 position) {
+        freeBall.setVolume(freeBall.play(), 0.5f);
+        Label messageLabelShadow = new Label("FREE BALL!!!", skin);
+        messageLabelShadow.setColor(Color.BLACK);
+        messageLabelShadow.setPosition(position.x  - (messageLabelShadow.getWidth()) - 2, position.y - 2);
+        messageLabelShadow.setFontScale(1.5f);
+        stage.addActor(messageLabelShadow);
         Label messageLabel = new Label("FREE BALL!!!", skin);
         messageLabel.setColor(1, 0.5f, 0.5f, 1);
         messageLabel.setPosition(position.x  - (messageLabel.getWidth()), position.y);
@@ -756,6 +819,7 @@ public class GameWorld {
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
+                messageLabelShadow.remove();
                 messageLabel.remove();
             }
         },2f);
@@ -797,8 +861,18 @@ public class GameWorld {
 
     private void endLevelSequence() {
         endCalled = true;
+        pauseButton.setVisible(false);
         System.out.println("ALL ORANGE HIT!!!");
         timeScale = 0f;
+        levelMusic.stop();
+        frenzyMusic.setVolume(0.5f);
+        frenzyMusic.setLooping(true);
+        frenzyMusic.play();
+        Label feverLabelShadow = new Label("PEGBALL FRENZY!!!", skin);
+        feverLabelShadow.setColor(Color.PURPLE);
+        feverLabelShadow.setPosition((VIRTUAL_WIDTH / 2) - (feverLabelShadow.getWidth()) - 2, (VIRTUAL_HEIGHT / 2) + (VIRTUAL_HEIGHT / 4) - 2);
+        feverLabelShadow.setFontScale(2f);
+        stage.addActor(feverLabelShadow);
         Label feverLabel = new Label("PEGBALL FRENZY!!!", skin);
         feverLabel.setColor(Color.ORANGE);
         feverLabel.setPosition((VIRTUAL_WIDTH / 2) - (feverLabel.getWidth()), (VIRTUAL_HEIGHT / 2) + (VIRTUAL_HEIGHT / 4));
@@ -808,6 +882,7 @@ public class GameWorld {
             @Override
             public void run() {
                 enableScoreBuckets();
+                feverLabelShadow.remove();
                 feverLabel.remove();
                 makePegBalls();
                 timeScale = 3f;
@@ -897,7 +972,7 @@ public class GameWorld {
     public void showWinLossMessage() {
         isTimerRunning = false;
         WinLossMenu menu = new WinLossMenu(GAME, GAME.getLevelManager(), checkOrangePegs(), characterSelectMenu.getCharacter(), gameContactListener.getTotalScore(),
-            shotsTaken, freeBallsEarned, elapsedTime, skin);
+            shotsTaken, freeBallsEarned, elapsedTime, frenzyMusic, levelMusic, skin);
         stage.addActor(menu);
         /*
         Label winMessage = new Label("YOU WIN!!!", skin);
@@ -939,6 +1014,7 @@ public class GameWorld {
                 giveFreeBall(new Vector2((viewport.getWorldWidth() / 2),50));
             } else {
                 System.out.println("Tails!");
+                noBall.play();
                 Label messageLabel = new Label("NO FREE BALL", skin);
                 messageLabel.setColor(Color.RED);
                 messageLabel.setPosition((viewport.getWorldWidth() / 2) - (messageLabel.getWidth()), 50);
@@ -1165,7 +1241,8 @@ public class GameWorld {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 togglePause(); // resumes the game
-                resumeSound.play();
+                pauseSound.stop();
+                resumeSound.setVolume(resumeSound.play(), 0.5f);
                 pauseMenu.remove(); // hides the menu
             }
         });
@@ -1178,6 +1255,9 @@ public class GameWorld {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 togglePause();
+                pauseSound.stop();
+                levelMusic.stop();
+                backSound.play();
                 pauseMenu.remove();
                 reset();
                 Gdx.input.setInputProcessor(null);
@@ -1205,7 +1285,8 @@ public class GameWorld {
         resetTimer();
         characterSelected = false;
         characterSelectMenu.reset();
-
+        pauseSound.dispose();
+        resumeSound.dispose();
         Gdx.input.setInputProcessor(null);
     }
 
@@ -1343,7 +1424,11 @@ public class GameWorld {
                     shapeRenderer.setColor(Color.RED);
                     peg.render(shapeRenderer);
                 } else if (peg.getPegType() == 4) {
-                    shapeRenderer.setColor(Color.LIME);
+                    if (GAME.getLevelManager().getCurrentLevel().isMirror()) {
+                        shapeRenderer.setColor(0.75f, 0.75f, 1f, 1f);
+                    } else {
+                        shapeRenderer.setColor(Color.LIME);
+                    }
                     peg.render(shapeRenderer);
                 } else if (peg.getPegType() == 3) {
                     shapeRenderer.setColor(Color.MAGENTA);

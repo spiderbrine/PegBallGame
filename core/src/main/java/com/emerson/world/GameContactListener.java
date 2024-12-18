@@ -1,6 +1,7 @@
 package com.emerson.world;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
@@ -46,11 +47,18 @@ public class GameContactListener implements ContactListener {
     private int sludgeTurns = 0;
     private int mirrorTurns = 0;
 
+    private Sound hitSound;
+    private Sound powerup;
+    private Sound osmium;
+
     public GameContactListener(Map<Integer, Peg> pegMap, List<Peg> pegs, GameWorld world, Stage stage) {
         this.pegMap = pegMap;
         this.pegs = pegs;
         this.world = world;
         this.stage = stage;
+        this.hitSound = Gdx.audio.newSound(Gdx.files.internal("pegHit.ogg"));
+        this.powerup = Gdx.audio.newSound(Gdx.files.internal("powerup.ogg"));
+        this.osmium = Gdx.audio.newSound(Gdx.files.internal("osmium.ogg"));
     }
 
     @Override
@@ -102,6 +110,7 @@ public class GameContactListener implements ContactListener {
     public void handlePegHit(int pegID, Peg hitPeg) {
         if (!hitPeg.isHit()) {
             System.out.println("Peg " + pegID + " has been hit!");
+            hitSound.play();
             hitPeg.pegHit();
             pegsHitList.add(hitPeg);
             pegsHit++;
@@ -161,6 +170,7 @@ public class GameContactListener implements ContactListener {
                 // green peg
                 // if level is mirror, activate mirror ball
                 // if not check character and activate corresponding power
+                powerup.setVolume(powerup.play(), 0.5f);
                 if (world.getGAME().getLevelManager().getCurrentLevel().isMirror()) {
                     world.activatePowerUp(mirrorBallPowerUp, world.getBall());
                     mirrorTurns++;
@@ -200,6 +210,7 @@ public class GameContactListener implements ContactListener {
 
             } else if (hitPeg.getPegType() == 5) {
                 // red peg
+                osmium.play();
                 world.activatePowerUp(osmiumBallPowerUp, world.getBall());
 
                 Label messageLabel = new Label("OSMIUM BALL!", skin);

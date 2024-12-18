@@ -1,20 +1,42 @@
 {
 levelCompletion: {
 	class: java.util.HashMap
-	Alien: true
-	Test 100/1: false
-	Test 100/25: true
-	Mushroom: false
-	Custom: false
-	Test 10/1: true
+	Alien: false
+	Houndeye: false
+	Roblox Dio: false
+	Godzilla: false
+	Christmas: false
+	Garfield: false
+	Butterfly: false
+	Shield: false
+	Bingus: true
+	Mushroom: true
+	Practice: true
+	Custom: true
+	Solid Snake: false
+	Fire Giant: true
+	Koala Mario: false
+	Ladybug: false
+	Snowman: false
 }
 highScores: {
 	class: java.util.HashMap
-	Alien: 155880
-	Test 100/1: 0
-	Test 100/25: 323200
-	Mushroom: 0
-	Custom: 0
-	Test 10/1: 76610
+	Alien: 0
+	Houndeye: 0
+	Roblox Dio: 0
+	Godzilla: 0
+	Christmas: 0
+	Garfield: 0
+	Butterfly: 0
+	Shield: 0
+	Bingus: 214050
+	Mushroom: 244530
+	Practice: 182340
+	Custom: 194840
+	Solid Snake: 0
+	Fire Giant: 238510
+	Koala Mario: 0
+	Ladybug: 0
+	Snowman: 0
 }
 }

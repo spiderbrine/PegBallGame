@@ -2,6 +2,7 @@ package com.emerson.gameobjects;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
@@ -38,6 +39,8 @@ public class BallLauncher extends GameObject {
     private Body body;
     private final GameWorld GAMEWORLD;
 
+    private Sound shootSound;
+
     public BallLauncher(GameWorld gameWorld, Body body, Vector2 position, float width, float height) {
 
         super(body, position, width, height);
@@ -49,6 +52,7 @@ public class BallLauncher extends GameObject {
         this.aimingLine = new AimingLine(gameWorld);
         this.ballCenter = new Vector2(position.x + width / 2, position.y - 10); // -10 from gameworld placing ball below launcher
 
+        shootSound = Gdx.audio.newSound(Gdx.files.internal("shootSound.ogg"));
 
         body.setType(BodyDef.BodyType.KinematicBody); // not affected by world forces but able to be moved manually
 
@@ -139,7 +143,8 @@ public class BallLauncher extends GameObject {
         ball.getBody().setType(BodyDef.BodyType.DynamicBody); // change the ball to dynamic so it can be affected by forces
         System.out.println("Ball is now able to move");
         ball.getBody().applyLinearImpulse(new Vector2(launchVelocity), ball.getBody().getWorldCenter(), true); // "shoot" ball
-        ball.getBody().setGravityScale(1);
+        ball.getBody().setGravityScale(1f);
+        shootSound.setVolume(shootSound.play(), 0.5f);
         System.out.println("Ball shot!");
         System.out.println(ball.getBody().getLinearVelocity());
     }
@@ -285,6 +290,10 @@ public class BallLauncher extends GameObject {
         shapeRenderer.set(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(Color.TAN);
         shapeRenderer.rect(position.x, position.y, width, height);
+        shapeRenderer.set(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(Color.BLACK);
+        shapeRenderer.rect(position.x, position.y, width, height);
+        shapeRenderer.set(ShapeRenderer.ShapeType.Filled);
         drawAimingLine(shapeRenderer);
         //aimingLine.render(shapeRenderer);
     }

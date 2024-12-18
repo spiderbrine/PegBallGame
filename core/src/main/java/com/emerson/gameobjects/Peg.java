@@ -1,5 +1,8 @@
 package com.emerson.gameobjects;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
@@ -19,6 +22,8 @@ public class Peg extends GameObject{
     private boolean isHit = false;
     private boolean decayed = false;
 
+    private Sound pegDisappear;
+
     public Peg(GameWorld gameWorld, Body body, Vector2 position, float radius, int pegID) {
         super(body, position, radius * 2, radius * 2);
         this.gameWorld = gameWorld;
@@ -26,6 +31,7 @@ public class Peg extends GameObject{
         this.radius = radius;
         this.pegType = 1;
         this.pegID = pegID;
+        pegDisappear = Gdx.audio.newSound(Gdx.files.internal("hover.ogg"));
 
         body.setType(BodyDef.BodyType.StaticBody);
 
@@ -51,6 +57,7 @@ public class Peg extends GameObject{
             @Override
             public void run(){
                 if (body != null) {
+                    pegDisappear.setVolume(pegDisappear.play(), 0.25f);
                     pegMap.remove(body.getUserData());
                     System.out.println("Peg " + getPegID() + " removed from map");
                     world.destroyBody(body);
@@ -90,10 +97,17 @@ public class Peg extends GameObject{
         //*** I don't know exactly what's going on here and why it works but we peg
         //float pegX = body.getPosition().x * PPM;
         //float pegY = body.getPosition().y * PPM;
+
         if (decayed) {
             shapeRenderer.setColor(0f, 1f, 0.5f, 1f);
         }
         shapeRenderer.circle(position.x, position.y, width / 2);  // render based on width (radius)
+
+        shapeRenderer.setAutoShapeType(true);
+        shapeRenderer.set(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(Color.BLACK);
+        shapeRenderer.circle(position.x, position.y, width / 2);  // render based on width (radius)
+        shapeRenderer.set(ShapeRenderer.ShapeType.Filled);
 
     }
 

@@ -1,6 +1,7 @@
 package com.emerson.gamescreens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -34,6 +35,9 @@ public class CharacterSelectMenu {
     private OrthographicCamera camera;
     private Viewport viewport;
 
+    private Sound confirmSound;
+    private Sound hover;
+
     public CharacterSelectMenu(Stage stage) {
         this.stage = stage;
 
@@ -42,6 +46,9 @@ public class CharacterSelectMenu {
         viewport.apply();
         camera.position.set(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, 0);
         camera.update();
+
+        confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirmSound.mp3"));
+        hover = Gdx.audio.newSound(Gdx.files.internal("hover.ogg"));
 
         characterSelectWindow = new Window("Select Character", skin);
 
@@ -70,6 +77,7 @@ public class CharacterSelectMenu {
             charButton.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
+                    confirmSound.play();
                     characterSelected = true;
                     character = charName;
                     System.out.println("Char menu set " + character);

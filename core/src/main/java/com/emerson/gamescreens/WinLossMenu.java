@@ -1,6 +1,8 @@
 package com.emerson.gamescreens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -16,10 +18,22 @@ public class WinLossMenu extends Window {
     private final Skin SKIN;
     private boolean highScore = false;
 
-    public WinLossMenu(PegBallStart game, LevelManager levelManager, boolean isVictory, String characterUsed, int score, int shots, int freeBalls, float elapsedTime, Skin skin) {
+    private Sound confirmSound;
+    private Sound backSound;
+    private Sound victory;
+    private Sound applause;
+    private Sound lose;
+
+    public WinLossMenu(PegBallStart game, LevelManager levelManager, boolean isVictory, String characterUsed, int score,
+                       int shots, int freeBalls, float elapsedTime, Music frenzyMusic, Music levelMusic, Skin skin) {
         super(isVictory ? "YOU WIN!" : "Game Over!", skin);
         this.GAME = game;
         this.SKIN = skin;
+        confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirmSound.mp3"));
+        backSound = Gdx.audio.newSound(Gdx.files.internal("backSound.mp3"));
+        victory = Gdx.audio.newSound(Gdx.files.internal("victory.ogg"));
+        applause = Gdx.audio.newSound(Gdx.files.internal("applause.ogg"));
+        lose = Gdx.audio.newSound(Gdx.files.internal("lose.ogg"));
 
         this.setModal(true);
         this.setMovable(true);
@@ -35,6 +49,8 @@ public class WinLossMenu extends Window {
         this.add(resultLabel).pad(10).row();
         if (isVictory) {
             System.out.println("Victory");
+            victory.setVolume(victory.play(), 0.4f);
+            applause.setVolume(applause.play(), 0.5f);
             // update save data
 
             SaveData saveData = GAME.getGameDataManager().loadGameData();
@@ -52,6 +68,8 @@ public class WinLossMenu extends Window {
 
             Label characterLabel = new Label("Character Used: " + characterUsed, skin);
             this.add(characterLabel).pad(10).row();
+        } else {
+            lose.play();
         }
         if (highScore) {
             Label highScoreLabel = new Label("NEW HIGH SCORE!!!", skin);
@@ -70,6 +88,9 @@ public class WinLossMenu extends Window {
                 for (Level level : GAME.getLevelManager().getLevels()) {
                     level.reset();
                 }
+                levelMusic.stop();
+                frenzyMusic.stop();
+                confirmSound.play();
                 GAME.setScreen(new GameScreen(GAME, levelManager.getCurrentLevelIndex()));// retry callback
                 remove();
             }
@@ -79,6 +100,9 @@ public class WinLossMenu extends Window {
         levelSelectButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                levelMusic.stop();
+                frenzyMusic.stop();
+                backSound.play();
                 GAME.setScreen(new LevelSelectScreen(GAME));
                 remove();
             }
